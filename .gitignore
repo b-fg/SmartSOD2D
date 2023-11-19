@@ -18,11 +18,5 @@
 **/train/
 **/eval/
 
-!examples/
 examples/*
-!examples/sin_rl/
-!examples/basefiles
 !examples/bl_rl/
-examples/bl_rl/*
-!examples/bl_rl/sarl_template/
-!examples/bl_rl/marl_template/
