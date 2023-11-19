@@ -1,0 +1,4 @@
+[submodule "sod2d_gitlab"]
+	path = sod2d_gitlab
+	url = git@gitlab.com:bsc_sod2d/sod2d_gitlab.git
+	branch = 82-smartredis-integration
