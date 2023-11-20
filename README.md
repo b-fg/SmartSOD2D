@@ -167,8 +167,19 @@ The total number of requested GPUs will be the number of parallel environments (
 
 ## Cite us!
 
-[//]: Cite the repo, preprint incomming
+A paper is coming out soon. In the meantime, if you find this repository useful, please cite it:
+```
+@misc{SmartSOD2D,
+  author = {B. Font, Francisco Alcántara-Ávila, Jean Rabault, Ricardo Vinuesa and Oriol Lehmkuhl},
+  title = {SmartSOD2D: A machine-laerning framework for the SOD2D CFD solver.},
+  year = {2023},
+  publisher = {GitHub},
+  journal = {GitHub repository},
+  url = {https://github.com/b-fg/SmartSOD2D},
+}
+```
 
 ## Acknowledgements
- and inspired in [Relexi](https://github.com/flexi-framework/relexi).
+This work was supported in part by the European Research Council (ERC) under the Caust grant ERC-AdG-101018287. OL has been partially funded by the European Commission’s Horizon 2020 Framework program and the European High-Performance Computing Joint Undertaking (JU) under grant agreement no. 101093393, and by MCIN/AEI/10.13039/501100011033 and the European Union NextGenerationEU/PRTR (PCI2022-134996-2), project CEEC. OL has been partially supported by a Ramon y Cajal postdoctoral contract (Ref: RYC2018-025949-I). RV and FAA acknowledge financial support from ERC grant no. ‘2021-CoG-101043998, DEEPCONTROL’. This package has been partially inspired by [Relexi](https://github.com/flexi-framework/relexi).
+
 
