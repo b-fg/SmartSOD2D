@@ -82,6 +82,7 @@ An example class that incorporates SmartRedis integration can be found in [`BLMA
 To compile SOD2D and link it with SmartRedis, the following `cmake` command can be used
 ```sh
 cd smartsod2d/sod2d_gitlab
+git checkout 82-smartredis-integration
 mkdir build && cd build
 cmake -DUSE_GPU=ON -DUSE_MEM_MANAGED=OFF -DUSE_SMARTREDIS=ON
 make -j8
