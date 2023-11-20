@@ -158,20 +158,27 @@ def plot_witness_spectra_welch(h5data, field='u_x', wit_point=0, t_range=(0.0, n
     plt.savefig(fname_out, format=fname_out.split('.')[-1], bbox_inches='tight') if fname_out else plt.show()
 
 
-def plot_actions(control_drl_fname, control_smooth_fname, fname_out=None, **kwargs):
+def plot_actions(control_drl_fname, control_smooth_fname, t_range=(0.0, np.inf), fname_out=None, **kwargs):
     force_latex()
+    colors = ['blue', 'orange', 'green']
 
     data = np.loadtxt(control_smooth_fname, delimiter=",", unpack=False)
     t_smooth, a_smooth = data[:, 0], data[:, 1:][:,::2]
+    t_indices = np.where((t_range[0] <= t_smooth) & (t_smooth <= t_range[1]))
+    t_smooth, a_smooth = t_smooth[t_indices], a_smooth[t_indices]
+
     data = np.loadtxt(control_drl_fname, delimiter=",", unpack=False)
     t, a = data[:, 0], data[:, 1:][:,::2]
+    t_indices = np.where((t_range[0] <= t) & (t <= t_range[1]))
+    t, a = t[t_indices], a[t_indices]
     marl_envs = a.shape[-1]
 
-    fig, ax = plot_xy(t_smooth, a_smooth[:, 0], return_figure=True, label=r'$a_1$', **kwargs)
+    fig, ax = plot_xy(t_smooth, a_smooth[:, 0], return_figure=True, label=r'$a_1$', color=colors[0], **kwargs)
+    ax.scatter(t, a[:, 0], s=7, edgecolor='black', linewidth=0.3, color=colors[0],  zorder=999)
     for i in range(1, marl_envs):
         a_str = f'a_{i}'
-        ax.plot(t_smooth, a_smooth[:, i], label=r'$'+f'a_{i}'+'$', linewidth=0.7)
-        ax.scatter(t, a[:, i], s=7, edgecolor='black', linewidth=0.3, zorder=999)
+        ax.plot(t_smooth, a_smooth[:, i], label=r'$'+f'a_{i+1}'+'$', linewidth=0.7, color=colors[i])
+        ax.scatter(t, a[:, i], s=7, edgecolor='black', linewidth=0.3, color=colors[i],  zorder=999)
     ax.legend(loc='upper right', bbox_to_anchor=(1.2, 1.05))
     plt.axhline(y=0.0, color='black', linestyle='--', linewidth=0.5)
     plt.savefig(fname_out, format=fname_out.split('.')[-1], bbox_inches='tight') if fname_out else plt.show()
