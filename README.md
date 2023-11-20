@@ -18,9 +18,9 @@ Typically, we launch multiple parallel CFD simulations that feed a DRL agent whi
 The figure below exemplifies a training scenario and the communication pattern that we follow.
 Since the multi-environment DRL technique is naturally parallel and the GPU-enabled CFD solver is parallel too, the current framework has great scalability and can potentially be deployed in exascale machines.
 
-<center>
+<p align="center">
 <img src="assets/comms.svg" alt="SmartSOD2D communications pattern" width="500"/>
-</center>
+</p>
 
 ## Installation
 The basic ingredients necessary to run the current framework are: SOD2D, SmartRedis, SmartSim, TF-Agents.
