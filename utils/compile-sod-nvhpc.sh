@@ -11,7 +11,7 @@ conda activate sod_smartsim
 clean=$1
 cdir=$(pwd)
 
-cd smartsod2d/sod2d_gitlab # relexi_sod is in $CPATH
+cd smartsod2d/sod2d_gitlab # is in $CPATH
 cp ../utils/CMakeLists-nvhpc.txt CMakeLists.txt
 cp ../utils/compilerOps-cc75.cmake cmake/compilerOps.cmake
 
