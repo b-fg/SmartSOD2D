@@ -3,7 +3,8 @@ import random, os, numpy as np
 f_control_classic = 0.0025
 t_control_classic = 1.0 / f_control_classic
 t_action = 0.1 * t_control_classic
-t_episode = 4.0 * t_control_classic
+t_episode_train = 4.0 * t_control_classic
+t_episode_eval = 50.0 * t_control_classic
 t_begin_control = 5.0 # controls begin after this value
 cfd_n_envs = 8
 marl_n_envs = 3
@@ -49,15 +50,15 @@ params = {
     "f_control_classic": f_control_classic,
     "t_action": t_action,
     "f_action": 1.0 / t_action,
-    "t_episode": t_episode,
+    "t_episode": t_episode_train if mode == "train" else t_episode_eval,
     "t_begin_control": t_begin_control,
     "action_bounds": (-0.3, 0.3),
-    "reward_norm": 153.6,
+    "reward_norm": 153.6, # non-actuated lx in coarse mesh
     "reward_beta": 0.5, # reward = beta * reward_global + (1.0 - beta) * reward_local
     "restart_file": 3, # 3: random. 1: restart 1. 2: restart 2
     "net": (128, 128),
     "learning_rate": 5e-4,
-    "replay_buffer_capacity": 2000, # trajectories buffer
+    "replay_buffer_capacity": int(t_episode_train / t_action) + 1, # trajectories buffer
     "log_interval": 1, # save model, policy, metrics, interval
     "summary_interval": 1, # write to tensorboard interval
     "seed": 16,
