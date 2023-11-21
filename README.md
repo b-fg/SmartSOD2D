@@ -90,7 +90,7 @@ To compile SOD2D and link it with SmartRedis, the following `cmake` command can 
 cd smartsod2d/sod2d_gitlab
 git checkout 82-smartredis-integration
 mkdir build && cd build
-cmake -DUSE_GPU=ON -DUSE_MEM_MANAGED=OFF -DUSE_SMARTREDIS=ON
+cmake .. -DUSE_GPU=ON -DUSE_MEM_MANAGED=OFF -DUSE_SMARTREDIS=ON
 make -j8
 ```
 This will compile SOD2D for GPU execution and the resulting binary will be found in `./sod2d_gitlab/build/src/app_sod2d/sod2d`.
