@@ -180,12 +180,12 @@ The total number of requested GPUs will be the number of parallel environments (
 A paper is coming out soon. In the meantime, if you find this repository useful, please cite it:
 ```
 @misc{SmartSOD2D,
-  author = {B. Font, Francisco Alcántara-Ávila, Jean Rabault, Ricardo Vinuesa and Oriol Lehmkuhl},
-  title = {SmartSOD2D: A machine-laerning framework for the SOD2D CFD solver},
+  author = {B. Font and Francisco Alcántara-Ávila and Jean Rabault and Ricardo Vinuesa and Oriol Lehmkuhl},
+  title = {SmartSOD2D: A machine-learning framework for the {SOD2D CFD} solver},
   year = {2023},
   publisher = {GitHub},
   journal = {GitHub repository},
-  url = {https://github.com/b-fg/SmartSOD2D},
+  url = {https://github.com/b-fg/SmartSOD2D}
 }
 ```
 
