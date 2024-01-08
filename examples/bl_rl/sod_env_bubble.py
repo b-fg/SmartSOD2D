@@ -33,6 +33,9 @@ class SodEnvBubble(SodEnvBase):
 
 
     def _get_reward(self):
+        """
+        Obtain the local unprocessed value of the reward from each CFD environment and compute the local/global reward for the problem at hand
+        """
         for i in range(self.cfd_n_envs):
             if self._step_type[i] > 0: # environment still running
                 self.client.poll_tensor(self.reward_key[i], 100, self.poll_time)
@@ -48,3 +51,23 @@ class SodEnvBubble(SodEnvBase):
                         self._reward[i * self.marl_n_envs + j] = self.reward_beta * global_reward + (1.0 - self.reward_beta) * local_reward[j]
                 except Exception as exc:
                     raise Warning(f"Could not read reward from key: {self.reward_key[i]}") from exc
+
+    def _set_action(self, action):
+        """
+        Write actions for each environment to be polled by the corresponding Sod2D environment.
+        Action clipping must be performed within the environment: https://github.com/tensorflow/agents/issues/216 when using PPO
+        """
+        # scale actions and reshape for SOD2D
+        action = action * self.action_bounds[1] if self.mode == "collect" else action
+        action = np.clip(action, self.action_bounds[0], self.action_bounds[1])
+        for i in range(self.cfd_n_envs):
+            for j in range(self.marl_n_envs):
+                self._action[i, j] = action[i * self.marl_n_envs + j]
+        # apply zero-net-mass-flow strategy
+        self._action_znmf = np.repeat(self._action, 2, axis=-1)
+        self._action_znmf[..., 1::2] *= -1.0
+        # write action into database
+        for i in range(self.cfd_n_envs):
+            self.client.put_tensor(self.action_key[i], self._action_znmf[i, ...].astype(self.sod_dtype))
+                # np.zeros(self.n_action * 2, dtype=self.sod_dtype))
+            logger.debug(f"[Env {i}] Writing (half) action: {numpy_str(self._action[i, :])}")
