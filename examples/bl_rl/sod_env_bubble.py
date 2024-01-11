@@ -5,7 +5,7 @@ import numpy as np
 from smartsim.log import get_logger
 from smartsod2d.utils import numpy_str
 
-from smartsod2d.sod_env_base import SodEnv
+from smartsod2d.sod_env import SodEnvBase
 
 logger = get_logger(__name__)
 
