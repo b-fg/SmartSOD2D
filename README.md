@@ -177,7 +177,17 @@ The total number of requested GPUs will be the number of parallel environments (
 
 ## Cite us!
 
-A paper is coming out soon. In the meantime, if you find this repository useful, please cite it:
+Plese cite our paper
+```
+@article{Font2024,
+  author = {B. Font and F. Alcántara-Ávila and J. Rabault and R. Vinuesa and O. Lehmkuhl},
+  year = {2024, accepted},
+  title = {Active flow control of a turbulent separation bubble through deep reinforcement learning},
+  journal = {Journal of Physics: Conference Series},
+  eprint = {https://arxiv.org/pdf/2403.20295}
+}
+```
+And, if you find it useful, please cite the repo too:
 ```
 @misc{SmartSOD2D,
   author = {B. Font and Francisco Alcántara-Ávila and Jean Rabault and Ricardo Vinuesa and Oriol Lehmkuhl},
