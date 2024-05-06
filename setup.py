@@ -18,5 +18,5 @@ setup(
     license=license_file,
     packages=find_packages(exclude=('tests', 'docs')),
 		setup_requires=['numpy'],
-		install_requires=['numpy', 'smartsim==0.4.2', 'smartredis', 'tensorflow', 'tf_agents==0.10.0', 'matplotlib']
+		install_requires=['numpy', 'smartsim', 'smartredis', 'tensorflow', 'tf_agents', 'matplotlib']
 )
