@@ -1,0 +1,34 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "smartsod2d"
+version = "2.0.0"
+authors = [
+    {name="Bernat Font", email="b.font@tudelft.nl"},
+    {name="Francisco Alcántara Ávila", email="fraa@kth.se"}
+]
+description = "A ML framework for the SOD2D CFD solver using SmartSim"
+keywords = ["reinforcement learning", "computational fluid dynamics"]
+requires-python = ">=3.11"
+dependencies = [
+  "smartsim==0.7.0",
+  "smartredis==0.5.3",
+  "tensorflow",
+  "tf_agents==0.19.0",
+  "numpy",
+  "matplotlib",
+]
+license = {file = "LICENSE.txt"}
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+
+[project.urls]
+Homepage = "https://github.com/b-fg/SmartSOD2D"
+Issues = "https://github.com/b-fg/SmartSOD2D/issues"

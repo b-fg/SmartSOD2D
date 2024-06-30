@@ -1,5 +1,8 @@
 .vscode/
 *.pyc
+*.pyc
+**/*pycache*
+
 *.err
 *.out
 *.dat
