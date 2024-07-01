@@ -6,7 +6,7 @@ t_action = 0.1
 t_episode_train = 1.0
 t_episode_eval = 5.0
 t_begin_control = 0.1 # controls begin after this value
-cfd_n_envs = 1
+cfd_n_envs = 2
 marl_n_envs = 3
 mode = "train" # "train" or "eval"
 
@@ -16,9 +16,9 @@ params = {
     "num_dbs": 1,
     "network_interface": "ib0", # "lo", "ib0"
     "run_command": "mpirun",
-    "launcher": "mn5", # "local", "mn5", "alvis"
-    "cluster_account": "NAISS2023-5-102", # for Alvis usage
-    "modules_sh": "/mimer/NOBACKUP/groups/deepmechalvis/bernat/smartsod2d/utils/modules-alvis-nvhpc.sh", # for Alvis usage
+    "launcher": "slurm", # "local", "slurm", "slurm-split"
+    "cluster_account": "NAISS2023-5-102", # for slurm_split usage, as in Alvis
+    "sod2d_modules": "/mimer/NOBACKUP/groups/deepmechalvis/bernat/smartsod2d/utils/modules-alvis-nvhpc.sh", # for slurm-split use cases
     "episode_walltime": "02:00:00",
 
     # environment params
@@ -45,7 +45,7 @@ params = {
 
     # RL params
     "mode": mode,
-    "num_episodes": 30, # total MARL episodes
+    "num_episodes": 10, # total MARL episodes
     "num_epochs": cfd_n_envs * marl_n_envs, # number of epochs to perform policy (optimizer) update per episode sampled. Rule of thumb: n_envs.
     "f_control_classic": f_control_classic,
     "t_action": t_action,
@@ -80,7 +80,7 @@ env_params = {
     "launcher": params["launcher"],
     "run_command": params["run_command"],
     "cluster_account": params["cluster_account"],
-    "modules_sh": params["modules_sh"],
+    "sod2d_modules": params["sod2d_modules"],
     "episode_walltime": params["episode_walltime"],
     "n_tasks_per_env": params["n_tasks_per_env"],
     "marl_n_envs": params["marl_n_envs"],

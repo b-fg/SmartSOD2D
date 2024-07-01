@@ -2,6 +2,7 @@
 
 import os
 import glob
+import shutil
 import random
 import numpy as np
 
@@ -26,10 +27,10 @@ class SodEnv(py_environment.PyEnvironment):
     - hosts: list of host nodes
     - sod_exe: Sod2D executable
     - cwd: working directory
-    - launcher: "mn5", "alvis", "local"
+    - launcher: "local", "slurm", "slurm-split"
     - run_command: "mpirun" ("srun" still not working)
     - cluster_account: project account for Alvis run
-    - modules_sh: modules file for Alvis run
+    - sod2d_modules: modules file for SOD2D when SOD2D simulations are launched as external jobs
     - episode_walltime: environment walltime for Alvis run
     - cfd_n_envs: number of cdf simulations
     - marl_n_envs: number of marl environments inside a cfd simulation
@@ -54,10 +55,10 @@ class SodEnv(py_environment.PyEnvironment):
         hosts,
         sod_exe,
         cwd,
-        launcher = "mn5",
+        launcher = "local",
         run_command = "mpirun",
         cluster_account = None,
-        modules_sh = None,
+        sod2d_modules = None,
         episode_walltime = None,
         cfd_n_envs = 2,
         marl_n_envs = 5,
@@ -94,7 +95,7 @@ class SodEnv(py_environment.PyEnvironment):
         self.cwd = cwd
         self.launcher = launcher
         self.cluster_account = cluster_account
-        self.modules_sh = modules_sh
+        self.sod2d_modules = sod2d_modules
         self.episode_walltime = episode_walltime
         self.witness_file = witness_file
         self.rectangle_file = rectangle_file
@@ -262,16 +263,16 @@ class SodEnv(py_environment.PyEnvironment):
     def _create_mpmd_ensemble(self, restart_file):
         f_mpmd = self._generate_mpmd_settings(restart_file)
         batch_settings = None
-        # Alvis configuration if requested.
-        #  - SOD2D simulations will be launched as external Slurm jobs.
-        #  - there are 4xA100 GPUs per node.
-        if self.launcher == "alvis":
+        # Slurm split configuration. Example for the Alvis cluster. To be generalised.
+        #  - SOD2D simulations will be launched as external Slurm jobs loading the modules contained in `sod2d_modules`
+        #  - there are 4xA100 GPUs per node in Alvis.
+        if self.launcher == "slurm-split":
             gpus_required = self.cfd_n_envs * self.n_tasks_per_env
             n_nodes = int(np.ceil(gpus_required / 4))
             gpus_per_node = '4' if gpus_required >= 4 else gpus_required
             batch_settings = create_batch_settings("slurm", nodes=n_nodes, account=self.cluster_account, time=self.episode_walltime,
                     batch_args={'ntasks':gpus_required, 'gpus-per-node':'A100:' + str(gpus_per_node)})
-            batch_settings.add_preamble([". " + self.modules_sh])
+            batch_settings.add_preamble([". " + self.sod2d_modules])
         return self.exp.create_model("ensemble", f_mpmd, batch_settings=batch_settings, path=self.cwd)
 
 
@@ -429,6 +430,9 @@ class SodEnv(py_environment.PyEnvironment):
             self.client.delete_tensor(self.step_type_key[i])
         # stop ensemble run
         self.exp.stop(self.ensemble)
+        # move ensemble log files
+        for f in glob.glob("ensemble-*"):
+            shutil.move(f, "sod2d_exp/")
 
 
     def __del__(self):

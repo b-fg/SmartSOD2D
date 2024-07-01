@@ -1,0 +1,136 @@
+{
+  "schema info": {
+    "schema_name": "entity manifest",
+    "version": "0.0.4"
+  },
+  "experiment": {
+    "name": "sod2d_exp",
+    "path": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp",
+    "launcher": "Slurm",
+    "out_file": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/logs/smartsim.out",
+    "err_file": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/logs/smartsim.err"
+  },
+  "runs": [
+    {
+      "run_id": "62cf7d0",
+      "timestamp": 1719847344078338257,
+      "model": [],
+      "orchestrator": [
+        {
+          "name": "orchestrator",
+          "type": "redis",
+          "interface": [
+            "ib0"
+          ],
+          "shards": [
+            {
+              "name": "orchestrator_0",
+              "hostname": "10.1.101.113",
+              "port": 6754,
+              "cluster": false,
+              "conf_file": null,
+              "out_file": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/sod2d_exp/62cf7d0/database/orchestrator/orchestrator_0/orchestrator_0.out",
+              "err_file": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/sod2d_exp/62cf7d0/database/orchestrator/orchestrator_0/orchestrator_0.err",
+              "memory_file": "",
+              "client_file": "",
+              "client_count_file": "",
+              "telemetry_metadata": {
+                "status_dir": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/sod2d_exp/62cf7d0/database/orchestrator/orchestrator_0",
+                "step_id": null,
+                "task_id": "417090",
+                "managed": false
+              }
+            }
+          ]
+        }
+      ],
+      "ensemble": []
+    },
+    {
+      "run_id": "da9b6bc",
+      "timestamp": 1719847345838375403,
+      "model": [
+        {
+          "name": "ensemble",
+          "path": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug",
+          "exe_args": [
+            "--restart_step=1",
+            "--f_action=10.0",
+            "--t_episode=1.0",
+            "--t_begin_control=0.1"
+          ],
+          "run_settings": {
+            "exe": [
+              "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d"
+            ],
+            "run_command": "/apps/ACC/NVIDIA-HPC-SDK/24.3/Linux_x86_64/24.3/comm_libs/mpi/bin/mpirun",
+            "run_args": {
+              "n": 1
+            }
+          },
+          "batch_settings": {},
+          "params": {},
+          "files": {
+            "Symlink": [],
+            "Configure": [],
+            "Copy": []
+          },
+          "colocated_db": {},
+          "telemetry_metadata": {
+            "status_dir": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/sod2d_exp/da9b6bc/model/ensemble",
+            "step_id": null,
+            "task_id": "417208",
+            "managed": false
+          },
+          "out_file": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/sod2d_exp/da9b6bc/model/ensemble/ensemble.out",
+          "err_file": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/sod2d_exp/da9b6bc/model/ensemble/ensemble.err"
+        }
+      ],
+      "orchestrator": [],
+      "ensemble": []
+    },
+    {
+      "run_id": "aa1d848",
+      "timestamp": 1719847366264671433,
+      "model": [
+        {
+          "name": "ensemble",
+          "path": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug",
+          "exe_args": [
+            "--restart_step=2",
+            "--f_action=10.0",
+            "--t_episode=1.0",
+            "--t_begin_control=0.1"
+          ],
+          "run_settings": {
+            "exe": [
+              "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d"
+            ],
+            "run_command": "/apps/ACC/NVIDIA-HPC-SDK/24.3/Linux_x86_64/24.3/comm_libs/mpi/bin/mpirun",
+            "run_args": {
+              "n": 1
+            }
+          },
+          "batch_settings": {},
+          "params": {},
+          "files": {
+            "Symlink": [],
+            "Configure": [],
+            "Copy": []
+          },
+          "colocated_db": {},
+          "telemetry_metadata": {
+            "status_dir": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/sod2d_exp/aa1d848/model/ensemble",
+            "step_id": null,
+            "task_id": "417291",
+            "managed": false
+          },
+          "out_file": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/sod2d_exp/aa1d848/model/ensemble/ensemble.out",
+          "err_file": "/gpfs/scratch/bsc21/bsc021850/smartsod2d/examples/bl_rl_debug/sod2d_exp/.smartsim/telemetry/sod2d_exp/aa1d848/model/ensemble/ensemble.err"
+        }
+      ],
+      "orchestrator": [],
+      "ensemble": []
+    }
+  ]
+}
