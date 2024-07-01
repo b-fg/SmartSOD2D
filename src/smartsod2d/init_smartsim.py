@@ -74,7 +74,7 @@ def init_smartsim(
     """
     logger.info("Starting SmartSim...")
 
-    launchers = ["alvis", "power9", "marenostrum"]
+    launchers = ["local", "mn5", "alvis"]
 
     # Launch in a local environment
     if launcher == "local":

@@ -26,7 +26,7 @@ class SodEnv(py_environment.PyEnvironment):
     - hosts: list of host nodes
     - sod_exe: Sod2D executable
     - cwd: working directory
-    - launcher: "power9", "alvis"
+    - launcher: "mn5", "alvis", "local"
     - run_command: "mpirun" ("srun" still not working)
     - cluster_account: project account for Alvis run
     - modules_sh: modules file for Alvis run
@@ -54,7 +54,7 @@ class SodEnv(py_environment.PyEnvironment):
         hosts,
         sod_exe,
         cwd,
-        launcher = "local",
+        launcher = "mn5",
         run_command = "mpirun",
         cluster_account = None,
         modules_sh = None,
@@ -147,15 +147,10 @@ class SodEnv(py_environment.PyEnvironment):
         self.state_size_key = state_size_key
         self.action_size_key = action_size_key
 
-        # apply patchelf to SOD2D executable if in power9 cluster
-        if launcher == "power9":
-            os.system("patchelf --replace-needed libstdc++.so.6 /apps/GCC/10.1.0-offload/lib/gcc/ppc64le-redhat-linux/10.1.0/libstdc++.so.6 " +
-                self.sod_exe)
-
         # connect Python Redis client to an orchestrator database
         self.db_address = db.get_address()[0]
         os.environ["SSDB"] = self.db_address
-        self.client = Client(self.db_address, cluster=self.db.batch)
+        self.client = Client(address=self.db_address, cluster=self.db.batch)
 
         # create SOD2D executable arguments
         self.tag = [str(i) for i in range(self.cfd_n_envs)] # environment tags [0, 1, ..., cfd_n_envs - 1]
@@ -211,6 +206,10 @@ class SodEnv(py_environment.PyEnvironment):
         if not self.ensemble or new_ensamble:
             self.ensemble = self._create_mpmd_ensemble(restart_file)
             logger.info(f"New ensamble created")
+        else:
+            self.ensemble.run_settings = self._generate_mpmd_settings(restart_file)
+            logger.info(f"Updated ensamble args for SOD2D simulations")
+
 
         self.exp.start(self.ensemble, block=False) # non-blocking start of Sod2D solver(s)
         self.envs_initialised = False
@@ -240,17 +239,15 @@ class SodEnv(py_environment.PyEnvironment):
             self._dump_rl_data()
 
 
-    def _create_mpmd_ensemble(self, restart_file):
+    def _generate_mpmd_settings(self, restart_file):
         # restart files are copied within SOD2D to the output_* folder
         if restart_file == 3:
             restart_step = [random.choice(["1", "2"]) for _ in range(self.cfd_n_envs)]
         else:
             restart_step = [str(restart_file) for _ in range(self.cfd_n_envs)]
-
         # set SOD2D exe arguments
         sod_args = {"restart_step": restart_step, "f_action": self.f_action,
             "t_episode": self.t_episode, "t_begin_control": self.t_begin_control}
-
         for i in range(self.cfd_n_envs):
             exe_args = [f"--{k}={v[i]}" for k,v in sod_args.items()]
             run = MpirunSettings(exe=self.sod_exe, exe_args=exe_args)
@@ -259,9 +256,12 @@ class SodEnv(py_environment.PyEnvironment):
                 f_mpmd = run
             else:
                 f_mpmd.make_mpmd(run)
+        return f_mpmd
 
+
+    def _create_mpmd_ensemble(self, restart_file):
+        f_mpmd = self._generate_mpmd_settings(restart_file)
         batch_settings = None
-
         # Alvis configuration if requested.
         #  - SOD2D simulations will be launched as external Slurm jobs.
         #  - there are 4xA100 GPUs per node.
@@ -272,8 +272,7 @@ class SodEnv(py_environment.PyEnvironment):
             batch_settings = create_batch_settings("slurm", nodes=n_nodes, account=self.cluster_account, time=self.episode_walltime,
                     batch_args={'ntasks':gpus_required, 'gpus-per-node':'A100:' + str(gpus_per_node)})
             batch_settings.add_preamble([". " + self.modules_sh])
-
-        return self.exp.create_model("ensemble", f_mpmd, batch_settings=batch_settings)
+        return self.exp.create_model("ensemble", f_mpmd, batch_settings=batch_settings, path=self.cwd)
 
 
     def _get_n_state(self):
