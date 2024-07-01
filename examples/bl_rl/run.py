@@ -209,7 +209,7 @@ with tf.compat.v2.summary.record_if(  # pylint: disable=not-context-manager
             global_step_val = global_step.numpy()
             start_time = time.time()
             collect_env.start(
-                new_ensamble=True,
+                new_ensamble=global_step_val == 0,
                 restart_file=params["restart_file"] if global_step_val > 0 else 1,
                 global_step=global_step_val
             )

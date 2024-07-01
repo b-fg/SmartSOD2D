@@ -17,8 +17,8 @@ params = {
     "network_interface": "ib0", # "lo", "ib0"
     "run_command": "mpirun",
     "launcher": "mn5", # "local", "mn5", "alvis"
-    "cluster_account": "NAISS2023-5-102", # for alvis usage
-    "modules_sh": "/mimer/NOBACKUP/groups/deepmechalvis/bernat/smartsod2d/utils/modules-alvis-nvhpc.sh", # for alvis usage
+    "cluster_account": "NAISS2023-5-102", # for Alvis usage
+    "modules_sh": "/mimer/NOBACKUP/groups/deepmechalvis/bernat/smartsod2d/utils/modules-alvis-nvhpc.sh", # for Alvis usage
     "episode_walltime": "02:00:00",
 
     # environment params

@@ -14,11 +14,11 @@ params = {
     # smartsim params
     "port": random.randint(6000, 7000), # generate a random port number
     "num_dbs": 1,
-    "network_interface": "ib0", # lo
+    "network_interface": "ib0", # "lo", "ib0"
     "run_command": "mpirun",
-    "launcher": "alvis", # "alvis", "power9", "local"
-    "cluster_account": "NAISS2023-5-102",
-    "modules_sh": "/mimer/NOBACKUP/groups/deepmechalvis/bernat/smartsod2d/utils/modules-alvis-nvhpc.sh",
+    "launcher": "mn5", # "local", "mn5", "alvis"
+    "cluster_account": "NAISS2023-5-102", # for Alvis usage
+    "modules_sh": "/mimer/NOBACKUP/groups/deepmechalvis/bernat/smartsod2d/utils/modules-alvis-nvhpc.sh", # for Alvis usage
     "episode_walltime": "02:00:00",
 
     # environment params
