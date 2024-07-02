@@ -46,6 +46,12 @@ class SodEnvBase(py_environment.PyEnvironment):
     - poll_time: time waiting for an array to appear in the database (in seconds)
     - witness_file: witness points file
     - rectangle_file: actuators surfaces file
+
+    This base class is used as template for custom classes that implement its own MARL state, reward, and action functions.
+    In summary, users need to defined a class inherited from this one that implements:
+        - _redistribute_state(): update self._state_marl
+        - _get_reward(): updates self._reward
+        - _set_action(): updates self._action, self._action_znmf, and writes action into DB.
     """
 
     def __init__( # pylint: disable=super-init-not-called

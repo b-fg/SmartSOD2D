@@ -26,7 +26,7 @@ import absl.logging
 
 from params import params, env_params
 from smartsod2d.init_smartsim import init_smartsim
-from smartsod2d.sod_env import SodEnv
+from sod_env_bubble import SodEnvBubble
 from smartsod2d.history import History
 from smartsod2d.utils import print_params, bcolors, params_str, numpy_str, deactivate_tf_gpus
 
@@ -60,7 +60,7 @@ exp, hosts, db, db_is_clustered = init_smartsim(
 )
 
 # Init environment
-collect_py_env = SodEnv(
+collect_py_env = SodEnvBubble(
     exp,
     db,
     hosts,
@@ -256,7 +256,7 @@ with tf.compat.v2.summary.record_if(  # pylint: disable=not-context-manager
 
     elif params['mode'] == "eval":
         # Init environment
-        eval_py_env = SodEnv(
+        eval_py_env = SodEnvBubble(
             exp,
             db,
             hosts,
