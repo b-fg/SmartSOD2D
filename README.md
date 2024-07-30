@@ -81,25 +81,23 @@ export LD_LIBRARY_PATH=$SMARTREDIS_DIR/lib:$LD_LIBRARY_PATH
 [SOD2D](https://gitlab.com/bsc_sod2d/sod2d_gitlab) is an open-source SEM CFD solver.
 In its repository, there are detailed instructions for the compilation of the solver in different architectures, as well as general information about its features and how to use the solver.
 Note that the branch devoted to the integration of SOD2D with SmartSim/SmartRedis is the [82-smartredis-integration](https://gitlab.com/bsc_sod2d/sod2d_gitlab/-/tree/82-smartredis-integration) branch.
-SOD2D is already included in this repository as a submodule pointing to this specific branch.
-To download and initialize the submodule just run:
+To download SOD2D, checkout to the appropriate branch, and initialize the submodules, run:
 ```sh
+git clone --recurse-submodules --remote-submodules https://gitlab.com/bsc_sod2d/sod2d_gitlab --branch 82-smartredis-integration
+cd sod2d_gitlab
 git submodule update --init --recursive
 ```
-Or include the `--recurse-submodules --remote-submodules` flags when cloning this repository.
-
 SOD2D sets up different cases through its main classes files, and this is selected by the [`sod2d.f90`](https://gitlab.com/bsc_sod2d/sod2d_gitlab/-/blob/master/src/app_sod2d/sources/sod2d.f90) file.
 An example class that incorporates SmartRedis integration can be found in [`BLMARLFlowSolverIncomp.f90`](https://gitlab.com/bsc_sod2d/sod2d_gitlab/-/blob/82-smartredis-integration/src/lib_mainBaseClass/sources/BLMARLFlowSolverIncomp.f90), which implements an adverse-pressure gradient turbulent boundary layer. Active flow control is performed using TF-agents with the objective of reducing the turbulent separation bubble. The communication routines are contained within this class and the [`mod_smartredis.f90`](https://gitlab.com/bsc_sod2d/sod2d_gitlab/-/blob/82-smartredis-integration/src/lib_sod2d/sources/mod_smartredis.f90) module in SOD2D.
 
 To compile SOD2D and link it with SmartRedis, the following `cmake` command can be used
 ```sh
-cd smartsod2d/sod2d_gitlab
 mkdir build && cd build
 unset LDFLAGS
-cmake -DUSE_GPU=ON -DUSE_MEM_MANAGED=OFF -DUSE_SMARTREDIS=ON
+cmake -DUSE_GPU=ON -DUSE_MEM_MANAGED=OFF -DUSE_SMARTREDIS=ON ..
 make -j
 ```
-This will compile SOD2D for GPU execution and the resulting binary will be found in `./sod2d_gitlab/build/src/app_sod2d/sod2d`.
+This will compile SOD2D for GPU execution and the resulting binary will be found in `build/src/app_sod2d/sod2d`.
 This executable needs to be copied to the relevant directory of the case to be run (more on this in the ["Run a case"](#run-a-case) section).
 Also, note that platform-specific flags can be used when configuring SOD2D such as `-DUSE_MN5=ON`.
 
@@ -112,7 +110,9 @@ python -m venv smartsod2d-env
 source smartsod2d-env/bin/activate
 pip install smartsim==0.7.0 # install smartredis==0.5.3
 smart build --device cpu --no_pt --no_tf
-pip install tf_agents==0.19.0 # installs tensorflow-2.15.1, keras-2.15.0
+pip install tf_agents==0.19.0
+pip install tensorflow==2.15.1
+pip install scipy==1.14.0
 ```
 Finally, SmartSOD2D can be installed in the `smartsod2d-env` environment with
 ```sh
