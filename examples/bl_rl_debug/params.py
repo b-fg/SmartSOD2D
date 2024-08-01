@@ -11,6 +11,9 @@ marl_n_envs = 3
 mode = "train" # "train" or "eval"
 
 params = {
+    # Sod2D json file name
+    "sod_JSON": "BLFlowSolverIncompDRL",
+
     # smartsim params
     "port": random.randint(6000, 7000), # generate a random port number
     "num_dbs": 1,
@@ -104,4 +107,5 @@ env_params = {
     "action_size_key": params["action_size_key"],
     "reward_key": params["reward_key"],
     "dump_data_flag": params["dump_data_flag"],
+    "sod_JSON": params["sod_JSON"],
 }

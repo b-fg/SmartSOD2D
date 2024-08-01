@@ -46,6 +46,7 @@ class SodEnvBase(py_environment.PyEnvironment):
     - poll_time: time waiting for an array to appear in the database (in seconds)
     - witness_file: witness points file
     - rectangle_file: actuators surfaces file
+    - sod_JSON: Name of the JSON file used to launch Sod2D (without .json extension)
 
     This base class is used as template for custom classes that implement its own MARL state, reward, and action functions.
     In summary, users need to defined a class inherited from this one that implements:
@@ -94,6 +95,7 @@ class SodEnvBase(py_environment.PyEnvironment):
         action_key = "action",
         action_size_key = "action_size",
         reward_key = "reward",
+        sod_JSON = "BLFlowSolverIncompDRL",
     ):
         self.exp = exp
         self.db = db
@@ -121,6 +123,7 @@ class SodEnvBase(py_environment.PyEnvironment):
         self.mode = mode
         self.dump_data_flag = dump_data_flag
         self.dump_data_path = os.path.join(self.cwd, "train") if mode == "collect" else os.path.join(self.cwd, "eval")
+        self.sod_JSON = sod_JSON
 
         # preliminary checks
         if 2 * marl_neighbors + 1 > marl_n_envs:
@@ -256,7 +259,7 @@ class SodEnvBase(py_environment.PyEnvironment):
         sod_args = {"restart_step": restart_step, "f_action": self.f_action,
             "t_episode": self.t_episode, "t_begin_control": self.t_begin_control}
         for i in range(self.cfd_n_envs):
-            exe_args = [f"--{k}={v[i]}" for k,v in sod_args.items()]
+            exe_args = [self.sod_JSON] + [f"--{k}={v[i]}" for k,v in sod_args.items()]
             run = MpirunSettings(exe=self.sod_exe, exe_args=exe_args)
             run.set_tasks(self.n_tasks_per_env)
             if i == 0:
