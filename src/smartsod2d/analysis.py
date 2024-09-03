@@ -151,15 +151,13 @@ def plot_witness_spectra_welch(h5data, field='u_x', wit_point=0, t_range=(0.0, n
         print_dominant_freqs(f, y)
 
     fig, ax = plot_xy(f[1:], y[1:], fname=fname_out, return_figure=True, xylog='xy', **kwargs)
-    # xlog, ylog = loglogLine(p2=(0.1, 1e-4), p1x=1e-2, m=-5/3)
-    # ax.loglog(xlog, ylog, color='black', lw=1, ls='dotted')
-    # plt.annotate(r'$-5/3$', xy=(1.3e-2,6e-4), fontsize=10)
     plt.tight_layout()
     plt.savefig(fname_out, format=fname_out.split('.')[-1], bbox_inches='tight') if fname_out else plt.show()
 
 
 def plot_actions(control_drl_fname, control_smooth_fname, t_scale=1, t_range=(0.0, np.inf), legend=True, fname_out=None, **kwargs):
     colors = ['blue', 'orange', 'green']
+    linewidth = kwargs.pop('linewidth', 20)
 
     data = np.loadtxt(control_smooth_fname, delimiter=",", unpack=False)
     t_smooth, a_smooth = data[:, 0], data[:, 1:][:,::2]
@@ -172,10 +170,12 @@ def plot_actions(control_drl_fname, control_smooth_fname, t_scale=1, t_range=(0.
     t, a = t[t_indices], a[t_indices]
     marl_envs = a.shape[-1]
 
-    fig, ax = plot_xy(t_smooth/t_scale, a_smooth[:, 0], return_figure=True, label=r'$A_\mathrm{ac,1}$', color=colors[0], **kwargs)
+    fig, ax = plot_xy(t_smooth/t_scale, a_smooth[:, 0], return_figure=True, label=r'$A_\mathrm{ac,1}$',
+        color=colors[0], linewidth=linewidth, **kwargs
+    )
     ax.scatter(t/t_scale, a[:, 0], s=7, edgecolor='black', linewidth=0.3, color=colors[0],  zorder=999)
     for i in range(1, marl_envs):
-        ax.plot(t_smooth/t_scale, a_smooth[:, i], label=r'$A_\mathrm{ac,'+str(i+1)+'}$', linewidth=0.7, color=colors[i])
+        ax.plot(t_smooth/t_scale, a_smooth[:, i], label=r'$A_\mathrm{ac,'+str(i+1)+'}$', color=colors[i], linewidth=linewidth)
         ax.scatter(t/t_scale, a[:, i], s=7, edgecolor='black', linewidth=0.3, color=colors[i],  zorder=999)
     if legend:
         legend = ax.legend(loc='upper right', bbox_to_anchor=(1.2, 1.05))
@@ -207,3 +207,21 @@ def print_lx_stats(t, lx):
     lx_std = np.sqrt(1 / len(lx) * np.sum((lx - lx_mean)**2))
     print(f'mean(lx) = {lx_mean}\n std(lx) = {lx_std}')
 
+
+def plot_history(history, events_list, data_dir, reward_norm=145.0, n_actions=40, **kwargs):
+    history.reload()
+    events = history.events
+    for k,v in events_list.items():
+        e = events[k]
+        r = e['y'] / n_actions
+        x = e['x']
+        fname_out = os.path.join(data_dir, 'train', k.split('/')[-1] + '.pdf')
+        plot_xy(x, r, fname=fname_out,
+            y_range=(-1.2,-0.7), y_label=v, yticks=[x for x in np.linspace(-0.7,-1.2,6)], x_label=r'$\mathrm{Episodes}$',
+            color='black', **kwargs)
+        print(f"History plot {v} saved on: {fname_out}")
+    loss = events['Losses/total_abs_loss']
+    fname_out = os.path.join(data_dir, 'train', 'loss.pdf')
+    plot_xy(loss['x'], loss['y'], fname=fname_out, y_range=(0, 200),
+        y_label=r'$\mathrm{Absolute\,\,Loss}$', x_label=r'$\mathrm{Episodes}$', color='black', **kwargs)
+    print(f"History plot AbsolutLoss saved on: {fname_out}")
