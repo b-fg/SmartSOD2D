@@ -2,6 +2,9 @@
 
 SmartSOD2D is a communications framework for [SOD2D](https://gitlab.com/bsc_sod2d/sod2d_gitlab) – a spectral-element method (SEM) computational fluid dynamics (CFD) solver – based on [SmartSim](https://github.com/CrayLabs/SmartSim). It allows online training of machine-learning (ML) models among other co-processing possibilities. SmartSOD2D originated as a fork of [Relexi](https://github.com/flexi-framework/relexi), a reinforcement learning framework for high-order HPC applications, and the fork was discontinued due to the CFD-solver dependency. Future joint efforts will focus on developing a general and modular CFD-solver-agnostic framework.
 
+SmartSOD2D has been employed in the following publications. Please cite us if you find this framework useful!
+  - [Font et al. 2024, Active flow control of a turbulent separation bubble through deep reinforcement learning. Journal of Physics: Conference Series, 2753(1), 012022](https://dx.doi.org/10.1088/1742-6596/2753/1/012022)
+
 ## How it works
 Most of the high-performance computing CFD solvers are written in low-level languages such as C/C++/Fortran.
 On the other hand, ML libraries are typically available in Python, or other high-level languages.
@@ -174,35 +177,6 @@ In this case, we could allocate a CPU core for a week which would then submit th
   - `cluster_account`: account to attach job to (if necessary)
 
 The total number of requested GPUs will be the number of parallel environments (`cfd_n_envs`) times the number of tasks per environment (`n_tasks_per_env`).
-
-## Cite us!
-
-Plese cite our paper
-```
-@article{Font2024,
-  title = {Active flow control of a turbulent separation bubble through deep reinforcement learning},
-  author = {Font, Bernat and Alcántara-Ávila, Francisco and Rabault, Jean and Vinuesa, Ricardo and Lehmkuhl,  Oriol},
-  volume = {2753},
-  ISSN = {1742-6596},
-  DOI = {10.1088/1742-6596/2753/1/012022},
-  number = {1},
-  journal = {Journal of Physics: Conference Series},
-  year = {2024},
-  pages = {012022}
-  eprint = {https://arxiv.org/pdf/2403.20295}
-}
-```
-And, if you find it useful, please cite the repo too:
-```
-@misc{SmartSOD2D,
-  author = {Font, Bernat and Alcántara-Ávila, Francisco and Rabault, Jean and Vinuesa, Ricardo and Lehmkuhl,  Oriol},
-  title = {SmartSOD2D: A machine-learning framework for the {SOD2D CFD} solver},
-  year = {2024},
-  publisher = {GitHub},
-  journal = {GitHub repository},
-  url = {https://github.com/b-fg/SmartSOD2D}
-}
-```
 
 ## Acknowledgements
 This work was supported in part by the European Research Council (ERC) under the Caust grant ERC-AdG-101018287. OL has been partially funded by the European Commission’s Horizon 2020 Framework program and the European High-Performance Computing Joint Undertaking (JU) under grant agreement no. 101093393, and by MCIN/AEI/10.13039/501100011033 and the European Union NextGenerationEU/PRTR (PCI2022-134996-2), project CEEC. OL has been partially supported by a Ramon y Cajal postdoctoral contract (Ref: RYC2018-025949-I). RV and FAA acknowledge financial support from ERC grant no. ‘2021-CoG-101043998, DEEPCONTROL’.
