@@ -1,6 +1,6 @@
 # SmartSOD2D
 
-SmartSOD2D is a communications framework for [SOD2D](https://gitlab.com/bsc_sod2d/sod2d_gitlab) – a spectral-element method (SEM) computational fluid dynamics (CFD) solver – based on [SmartSim](https://github.com/CrayLabs/SmartSim). It allows online training of machine-learning (ML) models among other co-processing possibilities. SmartSOD2D originated as a fork of [Relexi](https://github.com/flexi-framework/relexi), a reinforcement learning (RL) framework for high-order HPC applications, and the fork was discontinued due to the CFD-solver dependency. Future joint efforts will focus on developing a general and modular CFD-solver-agnostic framework.
+SmartSOD2D is a communications framework for [SOD2D](https://gitlab.com/bsc_sod2d/sod2d_gitlab) – a spectral-element method (SEM) computational fluid dynamics (CFD) solver – based on [SmartSim](https://github.com/CrayLabs/SmartSim). It allows online training of machine-learning (ML) models among other co-processing possibilities. SmartSOD2D originated as a fork of [Relexi](https://github.com/flexi-framework/relexi), a reinforcement learning framework for high-order HPC applications, and the fork was discontinued due to the CFD-solver dependency. Future joint efforts will focus on developing a general and modular CFD-solver-agnostic framework.
 
 ## How it works
 Most of the high-performance computing CFD solvers are written in low-level languages such as C/C++/Fortran.
