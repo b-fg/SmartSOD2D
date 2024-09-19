@@ -73,7 +73,7 @@ make install
 ### Add SmartRedis and RedisAI paths into system path
 Last, the installation paths of both libraries need to be exported in the following environmental variables
 ```sh
-export SMARTREDIS_DIR=<smartredis-path>/install
+export SMARTREDIS_DIR=<smartredis_path>/install
 export RAI_PATH=<redisai_path>/install-cpu/redisai.so
 export SMARTSIM_REDISAI=1.2.7
 export PATH=$SMARTREDIS_DIR/bin:$PATH
