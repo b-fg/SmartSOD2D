@@ -26,7 +26,7 @@ import absl.logging
 
 from params import params, env_params
 from smartsod2d.init_smartsim import init_smartsim
-from sod_env_bubble import SodEnvBubble
+from sod_env_cyl import SodEnvCyl
 from smartsod2d.history import History
 from smartsod2d.utils import print_params, bcolors, params_str, numpy_str, deactivate_tf_gpus
 
@@ -60,7 +60,7 @@ exp, hosts, db, db_is_clustered = init_smartsim(
 )
 
 # Init environment
-collect_py_env = SodEnvBubble(
+collect_py_env = SodEnvCyl(
     exp,
     db,
     hosts,
@@ -68,6 +68,7 @@ collect_py_env = SodEnvBubble(
     cwd,
     cfd_n_envs=params["cfd_n_envs"],
     mode="collect",
+    gpu_list=params["gpu_list"],
     **env_params,
 )
 collect_env = tf_py_environment.TFPyEnvironment(collect_py_env)
@@ -178,6 +179,12 @@ policy_checkpointer = common.Checkpointer(
 saved_model = policy_saver.PolicySaver(eval_policy, train_step=global_step)
 train_checkpointer.initialize_or_restore()
 
+# Create directory to save all the DRL signals generated
+if params["save_DRLtxt"] == True:
+    pathExists = os.path.exists("./DRLsignals")
+    if pathExists == False:
+        os.mkdir("DRLsignals")
+
 #--------------------------- Training / Evaluation ---------------------------
 with tf.compat.v2.summary.record_if(  # pylint: disable=not-context-manager
     lambda: tf.math.equal(global_step % params["summary_interval"], 0)
@@ -252,11 +259,33 @@ with tf.compat.v2.summary.record_if(  # pylint: disable=not-context-manager
                 timed_at_step = agent.train_step_counter.numpy()
                 collect_time = 0
                 train_time = 0
+
+            # Store the DRL signals generated during the episode
+            if params["save_DRLtxt"] == True:
+                for env in range(params["cfd_n_envs"]):
+
+                    # Create directory
+                    pathExists = os.path.exists("./DRLsignals/output_"+str(env)+"_"+str(int(global_step_val)))
+                    if pathExists == False:
+                        os.mkdir("DRLsignals/output_"+str(env)+"_"+str(int(global_step_val)))
+
+                    # Move data
+                    os.replace("output_"+str(env)+"/ClCd.txt",
+                            "DRLsignals/output_"+str(env)+"_"+str(int(global_step_val))+"/ClCd.txt")
+                    os.replace("output_"+str(env)+"/ClCd_avg.txt",
+                            "DRLsignals/output_"+str(env)+"_"+str(int(global_step_val))+"/ClCd_avg.txt")
+                    os.replace("output_"+str(env)+"/control_reward.txt",
+                            "DRLsignals/output_"+str(env)+"_"+str(int(global_step_val))+"/control_reward.txt")
+                    os.replace("output_"+str(env)+"/control_action.txt",
+                            "DRLsignals/output_"+str(env)+"_"+str(int(global_step_val))+"/control_action.txt")
+                    os.replace("output_"+str(env)+"/smooth_control_action.txt",
+                            "DRLsignals/output_"+str(env)+"_"+str(int(global_step_val))+"/smooth_control_action.txt")     
+           
         logger.info(f"{bcolors.BOLD}Ended training loop!{bcolors.ENDC}\n")
 
     elif params['mode'] == "eval":
         # Init environment
-        eval_py_env = SodEnvBubble(
+        eval_py_env = SodEnvCyl(
             exp,
             db,
             hosts,
@@ -264,6 +293,7 @@ with tf.compat.v2.summary.record_if(  # pylint: disable=not-context-manager
             cwd,
             cfd_n_envs=1,
             mode="eval",
+            gpu_list=params["gpu_list"][0],
             **env_params,
         )
         eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)

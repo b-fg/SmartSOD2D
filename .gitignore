@@ -1,5 +1,7 @@
 .vscode/
 *.pyc
+**/*pycache*
+
 *.err
 *.out
 *.dat
@@ -17,6 +19,9 @@
 **/output_*/
 **/train/
 **/eval/
+**/sod2d_exp/
 
 examples/*
 !examples/bl_rl/
+!examples/bl_rl_debug/
+

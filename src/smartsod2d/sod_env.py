@@ -2,6 +2,7 @@
 
 import os
 import glob
+import shutil
 import random
 import numpy as np
 
@@ -17,7 +18,7 @@ from smartsod2d.utils import n_witness_points, n_rectangles, numpy_str, bcolors
 
 logger = get_logger(__name__)
 
-class SodEnv(py_environment.PyEnvironment):
+class SodEnvBase(py_environment.PyEnvironment):
     """
     SOD2D environment(s) extending the tf_agents.environments.PyEnvironment class.
     Fields:
@@ -26,10 +27,10 @@ class SodEnv(py_environment.PyEnvironment):
     - hosts: list of host nodes
     - sod_exe: Sod2D executable
     - cwd: working directory
-    - launcher: "power9", "alvis"
+    - launcher: "local", "slurm", "slurm-split"
     - run_command: "mpirun" ("srun" still not working)
     - cluster_account: project account for Alvis run
-    - modules_sh: modules file for Alvis run
+    - sod2d_modules: modules file for SOD2D when SOD2D simulations are launched as external jobs
     - episode_walltime: environment walltime for Alvis run
     - cfd_n_envs: number of cdf simulations
     - marl_n_envs: number of marl environments inside a cfd simulation
@@ -45,6 +46,13 @@ class SodEnv(py_environment.PyEnvironment):
     - poll_time: time waiting for an array to appear in the database (in seconds)
     - witness_file: witness points file
     - rectangle_file: actuators surfaces file
+    - sod_JSON: Name of the JSON file used to launch Sod2D (without .json extension)
+
+    This base class is used as template for custom classes that implement its own MARL state, reward, and action functions.
+    In summary, users need to defined a class inherited from this one that implements:
+        - _redistribute_state(): update self._state_marl
+        - _get_reward(): updates self._reward
+        - _set_action(): updates self._action, self._action_znmf, and writes action into DB.
     """
 
     def __init__( # pylint: disable=super-init-not-called
@@ -57,7 +65,7 @@ class SodEnv(py_environment.PyEnvironment):
         launcher = "local",
         run_command = "mpirun",
         cluster_account = None,
-        modules_sh = None,
+        sod2d_modules = None,
         episode_walltime = None,
         cfd_n_envs = 2,
         marl_n_envs = 5,
@@ -87,6 +95,7 @@ class SodEnv(py_environment.PyEnvironment):
         action_key = "action",
         action_size_key = "action_size",
         reward_key = "reward",
+        sod_JSON = "BLFlowSolverIncompDRL",
     ):
         self.exp = exp
         self.db = db
@@ -94,7 +103,7 @@ class SodEnv(py_environment.PyEnvironment):
         self.cwd = cwd
         self.launcher = launcher
         self.cluster_account = cluster_account
-        self.modules_sh = modules_sh
+        self.sod2d_modules = sod2d_modules
         self.episode_walltime = episode_walltime
         self.witness_file = witness_file
         self.rectangle_file = rectangle_file
@@ -114,6 +123,7 @@ class SodEnv(py_environment.PyEnvironment):
         self.mode = mode
         self.dump_data_flag = dump_data_flag
         self.dump_data_path = os.path.join(self.cwd, "train") if mode == "collect" else os.path.join(self.cwd, "eval")
+        self.sod_JSON = sod_JSON
 
         # preliminary checks
         if 2 * marl_neighbors + 1 > marl_n_envs:
@@ -147,15 +157,10 @@ class SodEnv(py_environment.PyEnvironment):
         self.state_size_key = state_size_key
         self.action_size_key = action_size_key
 
-        # apply patchelf to SOD2D executable if in power9 cluster
-        if launcher == "power9":
-            os.system("patchelf --replace-needed libstdc++.so.6 /apps/GCC/10.1.0-offload/lib/gcc/ppc64le-redhat-linux/10.1.0/libstdc++.so.6 " +
-                self.sod_exe)
-
         # connect Python Redis client to an orchestrator database
         self.db_address = db.get_address()[0]
         os.environ["SSDB"] = self.db_address
-        self.client = Client(self.db_address, cluster=self.db.batch)
+        self.client = Client(address=self.db_address, cluster=self.db.batch)
 
         # create SOD2D executable arguments
         self.tag = [str(i) for i in range(self.cfd_n_envs)] # environment tags [0, 1, ..., cfd_n_envs - 1]
@@ -211,6 +216,10 @@ class SodEnv(py_environment.PyEnvironment):
         if not self.ensemble or new_ensamble:
             self.ensemble = self._create_mpmd_ensemble(restart_file)
             logger.info(f"New ensamble created")
+        else:
+            self.ensemble.run_settings = self._generate_mpmd_settings(restart_file)
+            logger.info(f"Updated ensamble args for SOD2D simulations")
+
 
         self.exp.start(self.ensemble, block=False) # non-blocking start of Sod2D solver(s)
         self.envs_initialised = False
@@ -240,40 +249,40 @@ class SodEnv(py_environment.PyEnvironment):
             self._dump_rl_data()
 
 
-    def _create_mpmd_ensemble(self, restart_file):
+    def _generate_mpmd_settings(self, restart_file):
         # restart files are copied within SOD2D to the output_* folder
         if restart_file == 3:
             restart_step = [random.choice(["1", "2"]) for _ in range(self.cfd_n_envs)]
         else:
             restart_step = [str(restart_file) for _ in range(self.cfd_n_envs)]
-
         # set SOD2D exe arguments
         sod_args = {"restart_step": restart_step, "f_action": self.f_action,
             "t_episode": self.t_episode, "t_begin_control": self.t_begin_control}
-
         for i in range(self.cfd_n_envs):
-            exe_args = [f"--{k}={v[i]}" for k,v in sod_args.items()]
+            exe_args = [self.sod_JSON] + [f"--{k}={v[i]}" for k,v in sod_args.items()]
             run = MpirunSettings(exe=self.sod_exe, exe_args=exe_args)
             run.set_tasks(self.n_tasks_per_env)
             if i == 0:
                 f_mpmd = run
             else:
                 f_mpmd.make_mpmd(run)
+        return f_mpmd
 
+
+    def _create_mpmd_ensemble(self, restart_file):
+        f_mpmd = self._generate_mpmd_settings(restart_file)
         batch_settings = None
-
-        # Alvis configuration if requested.
-        #  - SOD2D simulations will be launched as external Slurm jobs.
-        #  - there are 4xA100 GPUs per node.
-        if self.launcher == "alvis":
+        # Slurm split configuration. Example for the Alvis cluster. To be generalised.
+        #  - SOD2D simulations will be launched as external Slurm jobs loading the modules contained in `sod2d_modules`
+        #  - there are 4xA100 GPUs per node in Alvis.
+        if self.launcher == "slurm-split":
             gpus_required = self.cfd_n_envs * self.n_tasks_per_env
             n_nodes = int(np.ceil(gpus_required / 4))
             gpus_per_node = '4' if gpus_required >= 4 else gpus_required
             batch_settings = create_batch_settings("slurm", nodes=n_nodes, account=self.cluster_account, time=self.episode_walltime,
                     batch_args={'ntasks':gpus_required, 'gpus-per-node':'A100:' + str(gpus_per_node)})
-            batch_settings.add_preamble([". " + self.modules_sh])
-
-        return self.exp.create_model("ensemble", f_mpmd, batch_settings=batch_settings)
+            batch_settings.add_preamble([". " + self.sod2d_modules])
+        return self.exp.create_model("ensemble", f_mpmd, batch_settings=batch_settings, path=self.cwd)
 
 
     def _get_n_state(self):
@@ -315,32 +324,17 @@ class SodEnv(py_environment.PyEnvironment):
         """
         Redistribute state across MARL pseudo-environments.
         Make sure the witness points are written in such that the first moving coordinate is x, then y, and last z.
+
+        The redistributed state is saved in variable self._state_marl
         """
-        state_extended = np.concatenate((self._state, self._state, self._state), axis=1)
-        plane_wit = self.witness_xyz[0] * self.witness_xyz[1]
-        block_wit = int(plane_wit * (self.witness_xyz[2] / self.marl_n_envs))
-        for i in range(self.cfd_n_envs):
-            for j in range(self.marl_n_envs):
-                self._state_marl[i * self.marl_n_envs + j,:] = state_extended[i, block_wit * (j - self.marl_neighbors) + \
-                    self.n_state:block_wit * (j + self.marl_neighbors + 1) + self.n_state]
+        raise NotImplementedError
 
 
     def _get_reward(self):
-        for i in range(self.cfd_n_envs):
-            if self._step_type[i] > 0: # environment still running
-                self.client.poll_tensor(self.reward_key[i], 100, self.poll_time)
-                try:
-                    reward = self.client.get_tensor(self.reward_key[i])
-                    self.client.delete_tensor(self.reward_key[i])
-                    logger.debug(f"[Env {i}] Got reward: {numpy_str(reward)}")
-
-                    local_reward = -reward / self.reward_norm
-                    self._local_reward[i, :] = local_reward
-                    global_reward = np.mean(local_reward)
-                    for j in range(self.marl_n_envs):
-                        self._reward[i * self.marl_n_envs + j] = self.reward_beta * global_reward + (1.0 - self.reward_beta) * local_reward[j]
-                except Exception as exc:
-                    raise Warning(f"Could not read reward from key: {self.reward_key[i]}") from exc
+        """
+        Obtain the local unprocessed value of the reward from each CFD environment and compute the local/global reward for the problem at hand
+        """
+        raise NotImplementedError
 
 
     def _get_time(self):
@@ -387,22 +381,16 @@ class SodEnv(py_environment.PyEnvironment):
     def _set_action(self, action):
         """
         Write actions for each environment to be polled by the corresponding Sod2D environment.
-        Action clipping must be performed within the environment: https://github.com/tensorflow/agents/issues/216
+        Action clipping must be performed within the environment: https://github.com/tensorflow/agents/issues/216 when using PPO
         """
+        ## Sample structure for this function
         # scale actions and reshape for SOD2D
-        action = action * self.action_bounds[1] if self.mode == "collect" else action
-        action = np.clip(action, self.action_bounds[0], self.action_bounds[1])
-        for i in range(self.cfd_n_envs):
-            for j in range(self.marl_n_envs):
-                self._action[i, j] = action[i * self.marl_n_envs + j]
         # apply zero-net-mass-flow strategy
-        self._action_znmf = np.repeat(self._action, 2, axis=-1)
-        self._action_znmf[..., 1::2] *= -1.0
         # write action into database
-        for i in range(self.cfd_n_envs):
-            self.client.put_tensor(self.action_key[i], self._action_znmf[i, ...].astype(self.sod_dtype))
-                # np.zeros(self.n_action * 2, dtype=self.sod_dtype))
-            logger.debug(f"[Env {i}] Writing (half) action: {numpy_str(self._action[i, :])}")
+        # for i in range(self.cfd_n_envs):
+        #     self.client.put_tensor(self.action_key[i], self._action_znmf[i, ...].astype(self.sod_dtype))
+        #     logger.debug(f"[Env {i}] Writing action: {numpy_str(self._action[i, :])}")
+        raise NotImplementedError
 
 
     def _dump_rl_data(self):
@@ -430,6 +418,9 @@ class SodEnv(py_environment.PyEnvironment):
             self.client.delete_tensor(self.step_type_key[i])
         # stop ensemble run
         self.exp.stop(self.ensemble)
+        # move ensemble log files
+        for f in glob.glob("ensemble-*"):
+            shutil.move(f, "sod2d_exp/")
 
 
     def __del__(self):

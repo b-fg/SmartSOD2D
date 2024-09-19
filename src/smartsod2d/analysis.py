@@ -7,7 +7,7 @@ from scipy import signal, interpolate
 
 
 def force_latex(fontsize=14):
-    plt.rc('text', usetex=True )
+    plt.rc('text', usetex=True)
     plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
     plt.rc('font',family = 'sans-serif', size=fontsize)
     mpl.rc('xtick', labelsize=fontsize)
@@ -28,11 +28,11 @@ def plot_xy(x, y, fname=None, **kwargs):
     return_figure = kwargs.pop('return_figure', False)
     xticks = kwargs.pop('xticks', None)
     yticks = kwargs.pop('yticks', None)
-    fontsize = kwargs.pop('fontsize', None)
+    fontsize = kwargs.pop('fontsize', 20)
     box = kwargs.pop('box', 1)
-
+    force_latex(fontsize)
     if fontsize:
-        plt.rc('font',family = 'sans-serif',  size=fontsize) # use 13(JFM) or 16(SNH)
+        plt.rc('font', family='sans-serif', size=fontsize)
         mpl.rc('xtick', labelsize=fontsize)
         mpl.rc('ytick', labelsize=fontsize)
 
@@ -81,7 +81,7 @@ def plot_witness_timeseries(witness_file="resultwit.h5", field='u_x', wit_idx=0,
     return plot_xy(t, field, fname=fname, **kwargs)
 
 
-def welch(h5data, field='u_x', wit_idx=0, t_range=(0, np.inf), dt_resample=None, window='hann', n_splits=4):
+def welch(h5data, field='u_x', wit_idx=0, t_range=(0, np.inf), dt_resample=None, window='hann', n_splits=6):
     t_all = np.array(h5data.get('time'))
     t_indices = np.where((t_range[0] <= t_all) & (t_all <= t_range[1]))
     y_witness = np.array(h5data.get(field))
@@ -134,7 +134,7 @@ def find_wit_idx(h5data, xy):
 
 
 def plot_witness_spectra_welch(h5data, field='u_x', wit_point=0, t_range=(0.0, np.inf), dt_resample=1.0,
-        window='hann', n_splits=3, fname_out=None, **kwargs):
+        window='hann', n_splits=6, fname_out=None, **kwargs):
     force_latex()
 
     if wit_point is not int:
@@ -151,16 +151,13 @@ def plot_witness_spectra_welch(h5data, field='u_x', wit_point=0, t_range=(0.0, n
         print_dominant_freqs(f, y)
 
     fig, ax = plot_xy(f[1:], y[1:], fname=fname_out, return_figure=True, xylog='xy', **kwargs)
-    xlog, ylog = loglogLine(p2=(0.1, 1e-4), p1x=1e-2, m=-5/3)
-    ax.loglog(xlog, ylog, color='black', lw=1, ls='dotted')
-    plt.annotate(r'$-5/3$', xy=(1.3e-2,6e-4), fontsize=10)
     plt.tight_layout()
     plt.savefig(fname_out, format=fname_out.split('.')[-1], bbox_inches='tight') if fname_out else plt.show()
 
 
-def plot_actions(control_drl_fname, control_smooth_fname, t_range=(0.0, np.inf), fname_out=None, **kwargs):
-    force_latex()
+def plot_actions(control_drl_fname, control_smooth_fname, t_scale=1, t_range=(0.0, np.inf), legend=True, fname_out=None, **kwargs):
     colors = ['blue', 'orange', 'green']
+    linewidth = kwargs.pop('linewidth', 20)
 
     data = np.loadtxt(control_smooth_fname, delimiter=",", unpack=False)
     t_smooth, a_smooth = data[:, 0], data[:, 1:][:,::2]
@@ -173,26 +170,35 @@ def plot_actions(control_drl_fname, control_smooth_fname, t_range=(0.0, np.inf),
     t, a = t[t_indices], a[t_indices]
     marl_envs = a.shape[-1]
 
-    fig, ax = plot_xy(t_smooth, a_smooth[:, 0], return_figure=True, label=r'$a_1$', color=colors[0], **kwargs)
-    ax.scatter(t, a[:, 0], s=7, edgecolor='black', linewidth=0.3, color=colors[0],  zorder=999)
+    fig, ax = plot_xy(t_smooth/t_scale, a_smooth[:, 0], return_figure=True, label=r'$A_\mathrm{ac,1}$',
+        color=colors[0], linewidth=linewidth, **kwargs
+    )
+    ax.scatter(t/t_scale, a[:, 0], s=7, edgecolor='black', linewidth=0.3, color=colors[0],  zorder=999)
     for i in range(1, marl_envs):
-        a_str = f'a_{i}'
-        ax.plot(t_smooth, a_smooth[:, i], label=r'$'+f'a_{i+1}'+'$', linewidth=0.7, color=colors[i])
-        ax.scatter(t, a[:, i], s=7, edgecolor='black', linewidth=0.3, color=colors[i],  zorder=999)
-    ax.legend(loc='upper right', bbox_to_anchor=(1.2, 1.05))
+        ax.plot(t_smooth/t_scale, a_smooth[:, i], label=r'$A_\mathrm{ac,'+str(i+1)+'}$', color=colors[i], linewidth=linewidth)
+        ax.scatter(t/t_scale, a[:, i], s=7, edgecolor='black', linewidth=0.3, color=colors[i],  zorder=999)
+    if legend:
+        legend = ax.legend(loc='upper right', bbox_to_anchor=(1.2, 1.05))
+        legend.get_frame().set_linewidth(0.0)
     plt.axhline(y=0.0, color='black', linestyle='--', linewidth=0.5)
     plt.savefig(fname_out, format=fname_out.split('.')[-1], bbox_inches='tight') if fname_out else plt.show()
 
 
-def plot_lx(fname_in, t_range=(0.0, np.inf), fname_out=None, **kwargs):
-    force_latex()
+def plot_lx(fname_in, t_scale=1, t_range_act=(0.0, np.inf), t_range_avg=(0.0, np.inf), fname_out=None, **kwargs):
     data = np.loadtxt(fname_in, delimiter=',', unpack=False)
     t, lx = data[:, 0], np.mean(data[:, 1:], axis=1)
-    t_indices = np.where((t_range[0] <= t) & (t <= t_range[1]))
+    t_indices = np.where((t_range_act[0] <= t) & (t <= t_range_act[1]))
     t, lx = t[t_indices], lx[t_indices]
     t, iu = np.unique(t, return_index=True)
     lx = lx[iu]
-    plot_xy(t, lx, fname=fname_out, **kwargs)
+    print(f't_act = [{t[0]}, {t[-1]}]')
+    plot_xy(t/t_scale, lx, fname=fname_out, x_range=(t_range_act[0]/t_scale,t_range_act[1]/t_scale), **kwargs)
+
+    t_indices = np.where((t_range_avg[0] <= t) & (t <= t_range_avg[1]))
+    t, lx = t[t_indices], lx[t_indices]
+    t, iu = np.unique(t, return_index=True)
+    lx = lx[iu]
+    print(f't_avg = [{t[0]}, {t[-1]}]')
     print_lx_stats(t, lx)
 
 
@@ -201,3 +207,21 @@ def print_lx_stats(t, lx):
     lx_std = np.sqrt(1 / len(lx) * np.sum((lx - lx_mean)**2))
     print(f'mean(lx) = {lx_mean}\n std(lx) = {lx_std}')
 
+
+def plot_history(history, events_list, data_dir, reward_norm=145.0, n_actions=40, **kwargs):
+    history.reload()
+    events = history.events
+    for k,v in events_list.items():
+        e = events[k]
+        r = e['y'] / n_actions
+        x = e['x']
+        fname_out = os.path.join(data_dir, 'train', k.split('/')[-1] + '.pdf')
+        plot_xy(x, r, fname=fname_out,
+            y_range=(-1.2,-0.7), y_label=v, yticks=[x for x in np.linspace(-0.7,-1.2,6)], x_label=r'$\mathrm{Episodes}$',
+            color='black', **kwargs)
+        print(f"History plot {v} saved on: {fname_out}")
+    loss = events['Losses/total_abs_loss']
+    fname_out = os.path.join(data_dir, 'train', 'loss.pdf')
+    plot_xy(loss['x'], loss['y'], fname=fname_out, y_range=(0, 200),
+        y_label=r'$\mathrm{Absolute\,\,Loss}$', x_label=r'$\mathrm{Episodes}$', color='black', **kwargs)
+    print(f"History plot AbsolutLoss saved on: {fname_out}")

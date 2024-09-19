@@ -2,11 +2,11 @@ import random, os, numpy as np
 
 f_control_classic = 0.0025
 t_control_classic = 1.0 / f_control_classic
-t_action = 0.1 * t_control_classic
-t_episode_train = 4.0 * t_control_classic
-t_episode_eval = 50.0 * t_control_classic
-t_begin_control = 5.0 # controls begin after this value
-cfd_n_envs = 8
+t_action = 0.1
+t_episode_train = 1.0
+t_episode_eval = 5.0
+t_begin_control = 0.1 # controls begin after this value
+cfd_n_envs = 2
 marl_n_envs = 3
 mode = "train" # "train" or "eval"
 
@@ -48,7 +48,7 @@ params = {
 
     # RL params
     "mode": mode,
-    "num_episodes": 2000,
+    "num_episodes": 10, # total MARL episodes
     "num_epochs": cfd_n_envs * marl_n_envs, # number of epochs to perform policy (optimizer) update per episode sampled. Rule of thumb: n_envs.
     "f_control_classic": f_control_classic,
     "t_action": t_action,
