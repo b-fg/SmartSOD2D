@@ -28,7 +28,6 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 
-
 [project.urls]
 Homepage = "https://github.com/b-fg/SmartSOD2D"
 Issues = "https://github.com/b-fg/SmartSOD2D/issues"
