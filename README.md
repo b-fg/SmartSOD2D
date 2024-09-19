@@ -1,6 +1,6 @@
 # SmartSOD2D
 
-SmartSOD2D is a communications framework for [SOD2D](https://gitlab.com/bsc_sod2d/sod2d_gitlab) – a spectral-element method (SEM) computational fluid dynamics (CFD) solver – based on [SmartSim](https://github.com/CrayLabs/SmartSim). It allows online training of machine-learning (ML) models among other co-processing possibilities.
+SmartSOD2D is a communications framework for [SOD2D](https://gitlab.com/bsc_sod2d/sod2d_gitlab) – a spectral-element method (SEM) computational fluid dynamics (CFD) solver – based on [SmartSim](https://github.com/CrayLabs/SmartSim). It allows online training of machine-learning (ML) models among other co-processing possibilities. SmartSOD2D originated as a fork of [Relexi](https://github.com/flexi-framework/relexi), a reinforcement learning (RL) framework for high-order HPC applications, and the fork was discontinued due to the CFD-solver dependency. Future joint efforts will focus on developing a general and modular CFD-solver-agnostic framework.
 
 ## How it works
 Most of the high-performance computing CFD solvers are written in low-level languages such as C/C++/Fortran.
@@ -70,8 +70,8 @@ make install
 ### Add SmartRedis and RedisAI paths into system path
 Last, the installation paths of both libraries need to be exported in the following environmental variables
 ```sh
-export SMARTREDIS_DIR=smartredis/install
-export RAI_PATH=redisai/install-cpu/redisai.so
+export SMARTREDIS_DIR=<smartredis-path>/install
+export RAI_PATH=<redisai_path>/install-cpu/redisai.so
 export SMARTSIM_REDISAI=1.2.7
 export PATH=$SMARTREDIS_DIR/bin:$PATH
 export LD_LIBRARY_PATH=$SMARTREDIS_DIR/lib:$LD_LIBRARY_PATH
@@ -80,10 +80,9 @@ export LD_LIBRARY_PATH=$SMARTREDIS_DIR/lib:$LD_LIBRARY_PATH
 ### SOD2D
 [SOD2D](https://gitlab.com/bsc_sod2d/sod2d_gitlab) is an open-source SEM CFD solver.
 In its repository, there are detailed instructions for the compilation of the solver in different architectures, as well as general information about its features and how to use the solver.
-Note that the branch devoted to the integration of SOD2D with SmartSim/SmartRedis is the [82-smartredis-integration](https://gitlab.com/bsc_sod2d/sod2d_gitlab/-/tree/82-smartredis-integration) branch.
 To download SOD2D, checkout to the appropriate branch, and initialize the submodules, run:
 ```sh
-git clone --recurse-submodules --remote-submodules https://gitlab.com/bsc_sod2d/sod2d_gitlab --branch 82-smartredis-integration
+git clone --recurse-submodules --remote-submodules https://gitlab.com/bsc_sod2d/sod2d_gitlab
 cd sod2d_gitlab
 git submodule update --init --recursive
 ```
@@ -206,6 +205,6 @@ And, if you find it useful, please cite the repo too:
 ```
 
 ## Acknowledgements
-This work was supported in part by the European Research Council (ERC) under the Caust grant ERC-AdG-101018287. OL has been partially funded by the European Commission’s Horizon 2020 Framework program and the European High-Performance Computing Joint Undertaking (JU) under grant agreement no. 101093393, and by MCIN/AEI/10.13039/501100011033 and the European Union NextGenerationEU/PRTR (PCI2022-134996-2), project CEEC. OL has been partially supported by a Ramon y Cajal postdoctoral contract (Ref: RYC2018-025949-I). RV and FAA acknowledge financial support from ERC grant no. ‘2021-CoG-101043998, DEEPCONTROL’. This package has been partially inspired by [Relexi](https://github.com/flexi-framework/relexi).
+This work was supported in part by the European Research Council (ERC) under the Caust grant ERC-AdG-101018287. OL has been partially funded by the European Commission’s Horizon 2020 Framework program and the European High-Performance Computing Joint Undertaking (JU) under grant agreement no. 101093393, and by MCIN/AEI/10.13039/501100011033 and the European Union NextGenerationEU/PRTR (PCI2022-134996-2), project CEEC. OL has been partially supported by a Ramon y Cajal postdoctoral contract (Ref: RYC2018-025949-I). RV and FAA acknowledge financial support from ERC grant no. ‘2021-CoG-101043998, DEEPCONTROL’.
 
 
