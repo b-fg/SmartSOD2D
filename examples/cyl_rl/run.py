@@ -68,7 +68,6 @@ collect_py_env = SodEnvCyl(
     cwd,
     cfd_n_envs=params["cfd_n_envs"],
     mode="collect",
-    gpu_list=params["gpu_list"],
     **env_params,
 )
 collect_env = tf_py_environment.TFPyEnvironment(collect_py_env)
@@ -293,7 +292,6 @@ with tf.compat.v2.summary.record_if(  # pylint: disable=not-context-manager
             cwd,
             cfd_n_envs=1,
             mode="eval",
-            gpu_list=params["gpu_list"][0],
             **env_params,
         )
         eval_env = tf_py_environment.TFPyEnvironment(eval_py_env)

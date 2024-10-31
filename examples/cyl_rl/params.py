@@ -6,7 +6,8 @@ t_vortexShedding = 1.0 / f_vortexShedding       #5.81 TU
 t_episode_train = 6 * t_vortexShedding          #34.88 TU
 t_episode_eval = 50 * t_vortexShedding          #290.7 TU
 t_action = t_episode_train / 120                #0.290 TU (120 actions per episode)
-t_begin_control = 2.0                           #controls begin after this value (avoid the initial spikes when starting from a restart)
+#t_begin_control = t_vortexShedding             #controls begin after this value (avoid the initial spikes when starting from a restart)
+t_begin_control = 2.0
 
 cfd_n_envs = 4
 marl_n_envs = 10
@@ -20,7 +21,7 @@ params = {
     # smartsim params
     "port": random.randint(6000, 7000), # generate a random port number
     "num_dbs": 1,
-    "network_interface": "lo", # "lo", "ib0"
+    "network_interface": "ib0", # "lo", "ib0"
     "run_command": "mpirun",
     "launcher": "slurm", # "local", "slurm", "slurm-split"
 
@@ -53,7 +54,7 @@ params = {
     "f_action": 1.0 / t_action,
     "t_episode": t_episode_train if mode == "train" else t_episode_eval,
     "t_begin_control": t_begin_control,
-    "action_bounds": (-3.0, 3.0),
+    "action_bounds": (-0.176, 0.176),
     "reward_norm": 1, # ¿?
     "reward_beta": 0.2, # reward = beta * reward_global + (1.0 - beta) * reward_local
     "restart_file": 3, # 3: random. 1: restart 1. 2: restart 2
