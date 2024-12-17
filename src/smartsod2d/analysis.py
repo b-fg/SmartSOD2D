@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from scipy import signal, interpolate
 
 
-def force_latex(fontsize=14):
+def force_latex(fontsize=20):
     plt.rc('text', usetex=True)
     plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
     plt.rc('font',family = 'sans-serif', size=fontsize)
@@ -53,16 +53,18 @@ def plot_xy(x, y, fname=None, **kwargs):
     ax.set_ylabel(y_label)
 
     ax.tick_params(bottom=True, top=True, right=True, which='both', direction='in', length=2)
-    ax.set_box_aspect(box)
+    if box: ax.set_box_aspect(box)
 
     if not return_figure:
-        plt.savefig(fname, format=fname.split('.')[-1], bbox_inches='tight') if fname else plt.show()
-        plt.close()
+        save_plot(fname)
     if return_data:
         return x, y
     elif return_figure:
         return fig, ax
 
+def save_plot(fname):
+    plt.savefig(fname, format=fname.split('.')[-1], bbox_inches='tight') if fname else plt.show()
+    plt.close()
 
 def plot_tw(tw_file, fname=None, **kwargs):
     t, tw_neg, tw_pos = np.loadtxt(tw_file, delimiter=",", unpack=True)
@@ -132,9 +134,18 @@ def find_wit_idx(h5data, xy):
         print(i, xyz[i])
     return indices
 
+def plot_witness_spectra_welch(fl, yl, fname_out=None, **kwargs):
+    fig, ax = plot_xy(fl[0][1:], yl[0][1:], fname=fname_out, return_figure=True, xylog='xy', **kwargs)
+    for f,y in zip(fl[1:], yl[1:]):
+        ax.plot(f, y)
+    xlog, ylog = loglogLine(p2=(0.2, 3e-4), p1x=3e-2, m=-5/3)
+    ax.loglog(xlog, ylog, color='black', lw=1, ls='dotted')
+    plt.annotate(r'$-5/3$', xy=(7e-2, 2e-3), fontsize=10)
+    plt.tight_layout()
+    save_plot(fname_out)
 
-def plot_witness_spectra_welch(h5data, field='u_x', wit_point=0, t_range=(0.0, np.inf), dt_resample=1.0,
-        window='hann', n_splits=6, fname_out=None, **kwargs):
+def witness_spectra_welch(h5data, field='u_x', wit_point=0, t_range=(0.0, np.inf), dt_resample=1.0,
+        window='boxcar', n_splits=6): #, fname_out=None, **kwargs):
     force_latex()
 
     if wit_point is not int:
@@ -149,16 +160,18 @@ def plot_witness_spectra_welch(h5data, field='u_x', wit_point=0, t_range=(0.0, n
     else:
         f, y = welch(h5data, field=field, wit_idx=wit_idx, t_range=t_range, dt_resample=dt_resample, window=window, n_splits=n_splits)
         print_dominant_freqs(f, y)
+    return f, y
+    # fig, ax = plot_xy(f[1:], y[1:], fname=fname_out, return_figure=True, xylog='xy', **kwargs)
+    # xlog, ylog = loglogLine(p2=(0.2, 3e-4), p1x=3e-2, m=-5/3)
+    # ax.loglog(xlog, ylog, color='black', lw=1, ls='dotted')
+    # plt.annotate(r'$-5/3$', xy=(7e-2, 2e-3), fontsize=10)
+    # xlog, ylog = loglogLine(p2=(0.02, 8e-3), p1x=2e-3, m=-3/5)
+    # ax.loglog(xlog, ylog, color='black', lw=1, ls='dotted')
+    # plt.annotate(r'$-3/5$', xy=(0.006,0.02), fontsize=10)
+    # plt.tight_layout()
+    # save_plot(fname_out)
 
-    fig, ax = plot_xy(f[1:], y[1:], fname=fname_out, return_figure=True, xylog='xy', **kwargs)
-    plt.tight_layout()
-    plt.savefig(fname_out, format=fname_out.split('.')[-1], bbox_inches='tight') if fname_out else plt.show()
-
-
-def plot_actions(control_drl_fname, control_smooth_fname, t_scale=1, t_range=(0.0, np.inf), legend=True, fname_out=None, **kwargs):
-    colors = ['blue', 'orange', 'green']
-    linewidth = kwargs.pop('linewidth', 20)
-
+def get_actions(control_drl_fname, control_smooth_fname, t_range=(0.0, np.inf)):
     data = np.loadtxt(control_smooth_fname, delimiter=",", unpack=False)
     t_smooth, a_smooth = data[:, 0], data[:, 1:][:,::2]
     t_indices = np.where((t_range[0] <= t_smooth) & (t_smooth <= t_range[1]))
@@ -168,60 +181,183 @@ def plot_actions(control_drl_fname, control_smooth_fname, t_scale=1, t_range=(0.
     t, a = data[:, 0], data[:, 1:][:,::2]
     t_indices = np.where((t_range[0] <= t) & (t <= t_range[1]))
     t, a = t[t_indices], a[t_indices]
+    return t_smooth, a_smooth, t, a
+
+
+def plot_actions(control_drl_fname, control_smooth_fname, t_range=(0.0, np.inf), t_scale=1, fname_out=None, kwargs_plots=None):
+    t_smooth, a_smooth, t, a = get_actions(control_drl_fname, control_smooth_fname, t_range=t_range)
+    actions_signal(t, a, t_smooth, a_smooth, t_scale=t_scale, fname_out=fname_out, **kwargs_plots['signals'])
+    actions_autocorrelation(t, a, fname_out=fname_out, t_scale=t_scale, **kwargs_plots['R'])
+    actions_powerspectrum(t, a, fname_out=fname_out, **kwargs_plots['PS'])
+
+
+def actions_signal(t, a, t_smooth, a_smooth, t_scale=1, fname_out=None, **kwargs):
+    def export_legend(legend, fname_out="actions_legend.pdf"):
+        fig  = legend.figure
+        fig.canvas.draw()
+        bbox  = legend.get_window_extent().transformed(fig.dpi_scale_trans.inverted())
+        fig.savefig(fname_out, dpi="figure", bbox_inches=bbox)
+
+    colors = kwargs.pop('colors', ['blue', 'orange', 'green'])
+    legend = kwargs.pop('legend', True)
     marl_envs = a.shape[-1]
 
-    fig, ax = plot_xy(t_smooth/t_scale, a_smooth[:, 0], return_figure=True, label=r'$A_\mathrm{ac,1}$',
-        color=colors[0], linewidth=linewidth, **kwargs
-    )
-    ax.scatter(t/t_scale, a[:, 0], s=7, edgecolor='black', linewidth=0.3, color=colors[0],  zorder=999)
+    fig, ax = plot_xy(t_smooth/t_scale, a_smooth[:, 0], return_figure=True, color=colors[0], **kwargs)
+    ax.scatter(t/t_scale, a[:, 0], s=18, edgecolor='black', linewidth=0.3, color=colors[0], label=r'$v_\mathrm{ac,1}$', zorder=999)
     for i in range(1, marl_envs):
-        ax.plot(t_smooth/t_scale, a_smooth[:, i], label=r'$A_\mathrm{ac,'+str(i+1)+'}$', color=colors[i], linewidth=linewidth)
-        ax.scatter(t/t_scale, a[:, i], s=7, edgecolor='black', linewidth=0.3, color=colors[i],  zorder=999)
+        ax.plot(t_smooth/t_scale, a_smooth[:, i], color=colors[i])
+        ax.scatter(t/t_scale, a[:, i], s=18, edgecolor='black', linewidth=0.3, color=colors[i], label=r'$v_\mathrm{ac,'+str(i+1)+'}$', zorder=999)
     if legend:
-        legend = ax.legend(loc='upper right', bbox_to_anchor=(1.2, 1.05))
+        legend = ax.legend(loc='lower center', ncol=3, bbox_to_anchor=(0.5, -0.7),
+            labelspacing=0.01, handleheight=0.5, handletextpad=0.0, fontsize=12)
+        legend.get_frame().set_linewidth(0.0)
+        for handle in legend.legend_handles:
+            handle.set_sizes([20])
+        export_legend(legend, fname_out="/".join(fname_out.split('/')[:-1]) + '/actions_legend.pdf')
+        legend.remove()
+        ax.set_yticklabels([])
+        ax.set_yticks([])
+        ax.set(ylabel=None)
+
+    plt.axhline(y=0.0, color='black', linestyle='--', linewidth=0.5)
+    save_plot(fname_out)
+    print(f"Actions plot saved on: {fname_out}")
+
+def actions_autocorrelation(t, a, t_scale=1, fname_out=None, **kwargs):
+    def correlate(x, y):
+        assert len(x) == len(y)
+        xn = (x - np.mean(x))
+        yn = (y - np.mean(y))
+        c = np.correlate(xn, yn, mode='full') / (np.std(x) * np.std(y) * len(xn))
+        return c[c.size//2:]
+
+    fname, fmt = "".join(fname_out.split('.')[:-1]), fname_out.split('.')[-1]
+    fname_out = fname + f'_AC.' + fmt
+    colors = kwargs.pop('colors', ['blue', 'orange', 'green'])
+    legend = kwargs.pop('legend', True)
+
+    # Resample equidistant and subtract mean and
+    dt_avg = np.mean(np.diff(t))
+    print(f'Average dt = {dt_avg:.4f}')
+    dt_resample = kwargs.pop('dt_resample', None)
+    dt = dt_avg if dt_resample is None else dt_resample
+    print(f'Resampling with dt = {dt:.4f} for t = [{t[0]:.4f}, {t[-1]:.4f}]')
+    n_samples = int((t[-1] - t[0]) / dt)
+    a_resampled = np.zeros((n_samples, a.shape[1]))
+    t_equidistant = np.linspace(t[0], t[-1], n_samples)
+    for i in range(a.shape[1]):
+        y = a[:,i].flatten()
+        f = interpolate.interp1d(t, y)
+        a_resampled[:,i] = f(t_equidistant)
+    a1, a2, a3 = np.hsplit(a_resampled, 3)
+    a1 = a1.flatten(); a2 = a2.flatten(); a3 = a3.flatten()
+
+    # Perform correlations
+    c11 = correlate(a1, a1)
+    c22 = correlate(a2, a2)
+    c33 = correlate(a3, a3)
+    c12 = correlate(a1, a2)
+    c13 = correlate(a1, a3)
+    c23 = correlate(a2, a3)
+    tau = dt*np.array(range(n_samples))
+
+    # Plot
+    fig, ax = plot_xy(tau/t_scale, c11, label=r'$R_{11}$', fname=fname_out, return_figure=True, color=colors[0], **kwargs)
+    for (corr, label, color) in [(c12, '12', colors[3]), (c22, '22', colors[1]), (c13, '13', colors[4]),
+        (c33, '33', colors[2]), (c23, '23', colors[5])]:
+        ax.plot(tau/t_scale, corr, label=r'$R_{'+label+r'}$', color=color)
+    if legend:
+        legend = ax.legend(loc='lower center', ncol=3, bbox_to_anchor=(0.5, -0.56), handlelength=2,
+            labelspacing=0.05, handleheight=1, handletextpad=1, fontsize=kwargs['fontsize'])
         legend.get_frame().set_linewidth(0.0)
     plt.axhline(y=0.0, color='black', linestyle='--', linewidth=0.5)
-    plt.savefig(fname_out, format=fname_out.split('.')[-1], bbox_inches='tight') if fname_out else plt.show()
+    save_plot(fname_out)
+    print(f"Actions plot saved on: {fname_out}")
 
+def actions_powerspectrum(t, a, fname_out='actions.pdf', **kwargs):
+    fname, fmt = "".join(fname_out.split('.')[:-1]), fname_out.split('.')[-1]
+    window = kwargs.pop('window', 'boxcar')
+    n_splits = kwargs.pop('n_splits', 6)
+    fname_out = fname + f'_PS_{window}_{n_splits}.' + fmt
+    colors = kwargs.pop('colors', ['blue', 'orange', 'green'])
+    legend = kwargs.pop('legend', True)
 
-def plot_lx(fname_in, t_scale=1, t_range_act=(0.0, np.inf), t_range_avg=(0.0, np.inf), fname_out=None, **kwargs):
+    # Resample equidistant and subtract mean and
+    dt_avg = np.mean(np.diff(t))
+    print(f'Average dt = {dt_avg:.4f}')
+    dt_resample = kwargs.pop('dt_resample', None)
+    dt = dt_avg if dt_resample is None else dt_resample
+    print(f'Resampling with dt = {dt:.4f} for t = [{t[0]:.4f}, {t[-1]:.4f}]')
+    n_samples = int((t[-1] - t[0]) / dt)
+    a_resampled = np.zeros((n_samples, a.shape[1]))
+    t_equidistant = np.linspace(t[0], t[-1], n_samples)
+    for i in range(a.shape[1]):
+        y = a[:,i].flatten()
+        f = interpolate.interp1d(t, y)
+        a_resampled[:,i] = f(t_equidistant)
+    a1, a2, a3 = np.hsplit(a_resampled, 3)
+
+    freqs, Pxx_spec = signal.welch(a1.flatten(), 1/dt, window, a1.size//n_splits, scaling='spectrum')
+    fig, ax = plot_xy(freqs[1:], Pxx_spec[1:], label=r'$v_{\mathrm{ac},1}$', fname=fname_out, return_figure=True,
+        xylog='xy', color=colors[0], **kwargs)
+    for i,a in enumerate([a2, a3]):
+        freqs, Pxx_spec = signal.welch(a.flatten(), 1/dt, window, a.size//n_splits, scaling='spectrum')
+        ax.plot(freqs, Pxx_spec, color=colors[i+1], label=r'$v_\mathrm{ac,'+str(i+2)+'}$')
+    if legend:
+        legend = ax.legend(loc='lower center', ncol=3, bbox_to_anchor=(0.4, -0.48), handlelength=1,
+            labelspacing=0.1, handleheight=1, handletextpad=0.3, columnspacing=0.5, fontsize=kwargs['fontsize']+4)
+        legend.get_frame().set_linewidth(0.0)
+
+    xlog, ylog = loglogLine(p2=(3e-3, 2e-3), p1x=4e-4, m=-5/3)
+    ax.loglog(xlog, ylog, color='black', lw=1, ls='dotted')
+    plt.annotate(r'$-5/3$', xy=(1e-3,0.015), fontsize=kwargs['fontsize']-2)
+    ax.xaxis.set_tick_params(pad=10)
+    save_plot(fname_out)
+    print(f"Actions plot saved on: {fname_out}")
+
+def plot_lx(fname_in, t_scale=1, t_range=(0.0, np.inf), t_transient=5000, fname_out=None, **kwargs):
     data = np.loadtxt(fname_in, delimiter=',', unpack=False)
     t, lx = data[:, 0], np.mean(data[:, 1:], axis=1)
-    t_indices = np.where((t_range_act[0] <= t) & (t <= t_range_act[1]))
+    t_indices = np.where((t_range[0] <= t) & (t <= t_range[1]))
     t, lx = t[t_indices], lx[t_indices]
     t, iu = np.unique(t, return_index=True)
     lx = lx[iu]
-    print(f't_act = [{t[0]}, {t[-1]}]')
-    plot_xy(t/t_scale, lx, fname=fname_out, x_range=(t_range_act[0]/t_scale,t_range_act[1]/t_scale), **kwargs)
+    fig, ax = plot_xy(t/t_scale, lx, fname=fname_out, return_figure=True,
+        x_range=(t_range[0]/t_scale, t_range[1]/t_scale), color='black', **kwargs)
 
-    t_indices = np.where((t_range_avg[0] <= t) & (t <= t_range_avg[1]))
+    t, lx = data[:, 0], np.mean(data[:, 1:], axis=1)
+    t_indices = np.where((t_transient <= t) & (t <= t_range[1]))
     t, lx = t[t_indices], lx[t_indices]
     t, iu = np.unique(t, return_index=True)
     lx = lx[iu]
-    print(f't_avg = [{t[0]}, {t[-1]}]')
-    print_lx_stats(t, lx)
+
+    print(f't_range lx avg = [{t[0]}, {t[-1]}]')
+    lx_mean, _ = print_lx_stats(t, lx)
+    ax.axhline(y=lx_mean, color='grey', linestyle='--')
+    save_plot(fname_out)
 
 
 def print_lx_stats(t, lx):
     lx_mean = np.average(lx, weights=t)
     lx_std = np.sqrt(1 / len(lx) * np.sum((lx - lx_mean)**2))
     print(f'mean(lx) = {lx_mean}\n std(lx) = {lx_std}')
+    return lx_mean, lx_std
 
 
-def plot_history(history, events_list, data_dir, reward_norm=145.0, n_actions=40, **kwargs):
+def plot_history(history, events_list, output_dir='.', reward_norm=145.0, n_actions=40, **kwargs):
     history.reload()
     events = history.events
     for k,v in events_list.items():
         e = events[k]
         r = e['y'] / n_actions
         x = e['x']
-        fname_out = os.path.join(data_dir, 'train', k.split('/')[-1] + '.pdf')
+        fname_out = os.path.join(output_dir, k.split('/')[-1] + '.pdf')
         plot_xy(x, r, fname=fname_out,
             y_range=(-1.2,-0.7), y_label=v, yticks=[x for x in np.linspace(-0.7,-1.2,6)], x_label=r'$\mathrm{Episodes}$',
             color='black', **kwargs)
         print(f"History plot {v} saved on: {fname_out}")
     loss = events['Losses/total_abs_loss']
-    fname_out = os.path.join(data_dir, 'train', 'loss.pdf')
+    fname_out = os.path.join(output_dir, 'loss.pdf')
     plot_xy(loss['x'], loss['y'], fname=fname_out, y_range=(0, 200),
         y_label=r'$\mathrm{Absolute\,\,Loss}$', x_label=r'$\mathrm{Episodes}$', color='black', **kwargs)
     print(f"History plot AbsolutLoss saved on: {fname_out}")
