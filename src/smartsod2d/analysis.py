@@ -54,12 +54,13 @@ def plot_xy(x=None, y=None, fname=None, **kwargs):
     ax.tick_params(bottom=True, top=True, right=True, which='both', direction='in', length=2)
     if box: ax.set_box_aspect(box)
 
-    if not return_figure:
-        save_plot(fname)
-    if return_data and (x and y):
-        return x, y
-    elif return_figure:
+    if return_figure:
         return fig, ax
+    else:
+        save_plot(fname)
+    if return_data and (x is not None and y is not None):
+        return x, y
+    return
 
 def save_plot(fname):
     plt.savefig(fname, format=fname.split('.')[-1], bbox_inches='tight') if fname else plt.show()
