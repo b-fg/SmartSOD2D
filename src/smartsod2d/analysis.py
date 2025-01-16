@@ -5,7 +5,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 from scipy import signal, interpolate
 
-
 def force_latex(fontsize=20):
     plt.rc('text', usetex=True)
     plt.rc('text.latex', preamble=r'\usepackage{amsmath}')
@@ -15,10 +14,7 @@ def force_latex(fontsize=20):
     mpl.rcParams['axes.linewidth'] = 0.25
 
 
-def plot_xy(x, y, fname=None, **kwargs):
-    y_delta = np.max(np.abs([np.min(y), np.max(y)])) * 0.1
-    x_range = kwargs.pop('x_range', (np.min(x), np.max(x)))
-    y_range = kwargs.pop('y_range', (np.min(y) - y_delta, np.max(y) + y_delta))
+def plot_xy(x=None, y=None, fname=None, **kwargs):
     x_label = kwargs.pop('x_label', None)
     y_label = kwargs.pop('y_label', None)
     xylog = kwargs.pop('xylog', '')
@@ -36,31 +32,35 @@ def plot_xy(x, y, fname=None, **kwargs):
         mpl.rc('xtick', labelsize=fontsize)
         mpl.rc('ytick', labelsize=fontsize)
 
-    x_indices = np.where((x_range[0] <= x) & (x <= x_range[1]))
-    x, y = x[x_indices][::skip_every], y[x_indices][::skip_every]
     fig, ax = plt.subplots()
-    if xylog == 'xy': ax.loglog(x, y, **kwargs)
-    elif 'x' in xylog: ax.semilogx(x, y, **kwargs)
-    elif 'y' in xylog: ax.semilogy(x, y, **kwargs)
-    else: ax.plot(x, y, **kwargs)
+
+    if x is not None and y is not None:
+        y_delta = np.max(np.abs([np.min(y), np.max(y)])) * 0.1
+        x_range = kwargs.pop('x_range', (np.min(x), np.max(x)))
+        y_range = kwargs.pop('y_range', (np.min(y) - y_delta, np.max(y) + y_delta))
+        x_indices = np.where((x_range[0] <= x) & (x <= x_range[1]))
+        ax.set_xlim(x_range[0], x_range[1])
+        ax.set_ylim(y_range[0], y_range[1])
+        x, y = x[x_indices][::skip_every], y[x_indices][::skip_every]
+        if xylog == 'xy': ax.loglog(x, y, **kwargs)
+        elif 'x' in xylog: ax.semilogx(x, y, **kwargs)
+        elif 'y' in xylog: ax.semilogy(x, y, **kwargs)
+        else: ax.plot(x, y, **kwargs)
 
     if xticks: ax.set_xticks(xticks)
     if yticks: ax.set_yticks(yticks)
-
-    ax.set_xlim(x_range[0], x_range[1])
-    ax.set_ylim(y_range[0], y_range[1])
     ax.set_xlabel(x_label)
     ax.set_ylabel(y_label)
-
     ax.tick_params(bottom=True, top=True, right=True, which='both', direction='in', length=2)
     if box: ax.set_box_aspect(box)
 
-    if not return_figure:
-        save_plot(fname)
-    if return_data:
-        return x, y
-    elif return_figure:
+    if return_figure:
         return fig, ax
+    else:
+        save_plot(fname)
+    if return_data and (x is not None and y is not None):
+        return x, y
+    return
 
 def save_plot(fname):
     plt.savefig(fname, format=fname.split('.')[-1], bbox_inches='tight') if fname else plt.show()
@@ -68,19 +68,19 @@ def save_plot(fname):
 
 def plot_tw(tw_file, fname=None, **kwargs):
     t, tw_neg, tw_pos = np.loadtxt(tw_file, delimiter=",", unpack=True)
-    return plot_xy(t, tw_neg, fname=fname, **kwargs)
+    return plot_xy(x=t, y=tw_neg, fname=fname, **kwargs)
 
 
 def plot_control_signal(control_file, fname=None, t_min=0.0, t_max=1e6):
     t, y = np.loadtxt(control_file, delimiter=",", unpack=True)
-    return plot_xy(t, y, fname=fname, **kwargs)
+    return plot_xy(x=t, y=y, fname=fname, **kwargs)
 
 
 def plot_witness_timeseries(witness_file="resultwit.h5", field='u_x', wit_idx=0, fname=None, **kwargs):
     h5file = h5py.File(witness_file)
     t = np.array(h5file.get('time'))
     field = np.array(h5file.get(field))[wit_idx]
-    return plot_xy(t, field, fname=fname, **kwargs)
+    return plot_xy(x=t, y=field, fname=fname, **kwargs)
 
 
 def welch(h5data, field='u_x', wit_idx=0, t_range=(0, np.inf), dt_resample=None, window='hann', n_splits=6):
@@ -135,7 +135,7 @@ def find_wit_idx(h5data, xy):
     return indices
 
 def plot_witness_spectra_welch(fl, yl, fname_out=None, **kwargs):
-    fig, ax = plot_xy(fl[0][1:], yl[0][1:], fname=fname_out, return_figure=True, xylog='xy', **kwargs)
+    fig, ax = plot_xy(x=fl[0][1:], y=yl[0][1:], fname=fname_out, return_figure=True, xylog='xy', **kwargs)
     for f,y in zip(fl[1:], yl[1:]):
         ax.plot(f, y)
     xlog, ylog = loglogLine(p2=(0.2, 3e-4), p1x=3e-2, m=-5/3)
@@ -202,7 +202,7 @@ def actions_signal(t, a, t_smooth, a_smooth, t_scale=1, fname_out=None, **kwargs
     legend = kwargs.pop('legend', True)
     marl_envs = a.shape[-1]
 
-    fig, ax = plot_xy(t_smooth/t_scale, a_smooth[:, 0], return_figure=True, color=colors[0], **kwargs)
+    fig, ax = plot_xy(x=t_smooth/t_scale, y=a_smooth[:, 0], return_figure=True, color=colors[0], **kwargs)
     ax.scatter(t/t_scale, a[:, 0], s=18, edgecolor='black', linewidth=0.3, color=colors[0], label=r'$v_\mathrm{ac,1}$', zorder=999)
     for i in range(1, marl_envs):
         ax.plot(t_smooth/t_scale, a_smooth[:, i], color=colors[i])
@@ -262,7 +262,7 @@ def actions_autocorrelation(t, a, t_scale=1, fname_out=None, **kwargs):
     tau = dt*np.array(range(n_samples))
 
     # Plot
-    fig, ax = plot_xy(tau/t_scale, c11, label=r'$R_{11}$', fname=fname_out, return_figure=True, color=colors[0], **kwargs)
+    fig, ax = plot_xy(x=tau/t_scale, y=c11, label=r'$R_{11}$', fname=fname_out, return_figure=True, color=colors[0], **kwargs)
     for (corr, label, color) in [(c12, '12', colors[3]), (c22, '22', colors[1]), (c13, '13', colors[4]),
         (c33, '33', colors[2]), (c23, '23', colors[5])]:
         ax.plot(tau/t_scale, corr, label=r'$R_{'+label+r'}$', color=color)
@@ -298,7 +298,7 @@ def actions_powerspectrum(t, a, fname_out='actions.pdf', **kwargs):
     a1, a2, a3 = np.hsplit(a_resampled, 3)
 
     freqs, Pxx_spec = signal.welch(a1.flatten(), 1/dt, window, a1.size//n_splits, scaling='spectrum')
-    fig, ax = plot_xy(freqs[1:], Pxx_spec[1:], label=r'$v_{\mathrm{ac},1}$', fname=fname_out, return_figure=True,
+    fig, ax = plot_xy(x=freqs[1:], y=Pxx_spec[1:], label=r'$v_{\mathrm{ac},1}$', fname=fname_out, return_figure=True,
         xylog='xy', color=colors[0], **kwargs)
     for i,a in enumerate([a2, a3]):
         freqs, Pxx_spec = signal.welch(a.flatten(), 1/dt, window, a.size//n_splits, scaling='spectrum')
@@ -322,7 +322,7 @@ def plot_lx(fname_in, t_scale=1, t_range=(0.0, np.inf), t_transient=5000, fname_
     t, lx = t[t_indices], lx[t_indices]
     t, iu = np.unique(t, return_index=True)
     lx = lx[iu]
-    fig, ax = plot_xy(t/t_scale, lx, fname=fname_out, return_figure=True,
+    fig, ax = plot_xy(x=t/t_scale, y=lx, fname=fname_out, return_figure=True,
         x_range=(t_range[0]/t_scale, t_range[1]/t_scale), color='black', **kwargs)
 
     t, lx = data[:, 0], np.mean(data[:, 1:], axis=1)
@@ -345,19 +345,33 @@ def print_lx_stats(t, lx):
 
 
 def plot_history(history, events_list, output_dir='.', reward_norm=145.0, n_actions=40, **kwargs):
+    fig, ax = plot_xy(None, None, None, return_figure=True, **kwargs)
     history.reload()
     events = history.events
+    color = iter(plt.cm.rainbow(np.linspace(0, 1, len(events_list))))
     for k,v in events_list.items():
         e = events[k]
-        r = e['y'] / n_actions
-        x = e['x']
-        fname_out = os.path.join(output_dir, k.split('/')[-1] + '.pdf')
-        plot_xy(x, r, fname=fname_out,
-            y_range=(-1.2,-0.7), y_label=v, yticks=[x for x in np.linspace(-0.7,-1.2,6)], x_label=r'$\mathrm{Episodes}$',
-            color='black', **kwargs)
-        print(f"History plot {v} saved on: {fname_out}")
+        ax.plot(e['x'], e['y'] / n_actions, color=next(color), label=v)
+
+    ax2 = ax.twinx()
+    ax.set_xlim(*kwargs.pop('x_range', (np.min(e['x']), np.max(e['x']))))
+    ax.set_ylim(-1.2, -0.7)
+    ax.set_yticks([y for y in np.linspace(-0.7, -1.2,6)])
+    ax.set_xlabel(r'$\mathrm{Episodes}$')
+    ax.set_ylabel(r'$\mathrm{Reward}$')
+    ax.set_box_aspect(1)
+
+    ax2.set_ylabel(r'$\mathrm{Loss}$')
+    ax2.set_ylim(0, 200)
+
     loss = events['Losses/total_abs_loss']
-    fname_out = os.path.join(output_dir, 'loss.pdf')
-    plot_xy(loss['x'], loss['y'], fname=fname_out, y_range=(0, 200),
-        y_label=r'$\mathrm{Absolute\,\,Loss}$', x_label=r'$\mathrm{Episodes}$', color='black', **kwargs)
-    print(f"History plot AbsolutLoss saved on: {fname_out}")
+    ax2.plot(loss['x'], loss['y'], label=r'$\mathrm{Absolute\,\,Loss}$', color='black')
+
+    legend = fig.legend(loc='lower center', ncol=2, bbox_to_anchor=(0.5, -0.2),
+        labelspacing=0.5, handleheight=0.5, handletextpad=0.5, fontsize=16)
+    legend.get_frame().set_linewidth(0.0)
+
+    fname_out = os.path.join(output_dir, 'history.pdf')
+    save_plot(fname_out)
+
+    print(f"History plot saved on: {fname_out}")
