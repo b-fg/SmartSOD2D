@@ -3,6 +3,7 @@
 SmartSOD2D is a communications framework for [SOD2D](https://gitlab.com/bsc_sod2d/sod2d_gitlab) – a spectral-element method (SEM) computational fluid dynamics (CFD) solver – based on [SmartSim](https://github.com/CrayLabs/SmartSim). It allows online training of machine-learning (ML) models among other co-processing possibilities. SmartSOD2D originated as a fork of [Relexi](https://github.com/flexi-framework/relexi), a reinforcement learning framework for high-order HPC applications, and the fork was discontinued due to the CFD-solver dependency. Future joint efforts will focus on developing a general and modular CFD-solver-agnostic framework.
 
 SmartSOD2D has been employed in the following publications. Please cite us if you find this framework useful!
+  - [Font et al. 2025, Deep reinforcement learning for active flow control in a turbulent separation bubble. Nature Communications, 16, 1422](https://dx.doi.org/10.1038/s41467-025-56408-6)
   - [Font et al. 2024, Active flow control of a turbulent separation bubble through deep reinforcement learning. Journal of Physics: Conference Series, 2753(1), 012022](https://dx.doi.org/10.1088/1742-6596/2753/1/012022)
 
 ## How it works
