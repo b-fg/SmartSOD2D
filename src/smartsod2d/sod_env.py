@@ -5,6 +5,7 @@ import glob
 import shutil
 import random
 import numpy as np
+import subprocess
 
 from tf_agents.specs import array_spec
 from tf_agents.environments import py_environment
@@ -16,7 +17,45 @@ from smartsim.settings.settings import create_batch_settings
 from smartsim.log import get_logger
 from smartsod2d.utils import n_witness_points, n_rectangles, numpy_str, bcolors
 
+from pycompss.api.constraint import constraint
+from pycompss.api.task import task
+from pycompss.api.mpi import mpi
+from pycompss.api.api import compss_wait_on
+from pycompss.api.on_failure import on_failure
+
 logger = get_logger(__name__)
+
+from hecuba import StorageStream, StorageNumpy
+
+class mynumpyclass(StorageNumpy,StorageStream):
+    '''
+    pass
+    '''
+
+
+@constraint(processors=[
+        {"processorType": "CPU", "computingUnits": "1"},
+        {"processorType": "GPU", "computingUnits": "1"}
+    ])
+@mpi(
+    working_dir="/gpfs/scratch/bsc19/bsc19959/ceec/Cristian",
+    binary="sod2d",
+    runner="mpirun",
+    processes=4, 
+    flags="-x SSDB={{db_address}} -x SR_DB_TYPE=Standalone", #-x COMPSS_BINDED_GPUS
+    args="{{json_name}} --restart_step={{restart_step}} --f_action={{f_action}} --t_episode={{t_episode}} --t_begin_control={{t_begin_control}}"
+)
+@on_failure(management="IGNORE")
+@task()
+def compss_sod2d(db_address, json_name, restart_step, f_action, t_episode, t_begin_control):
+    pass
+
+
+@task(is_replicated=True)
+def cancel_sod2d():
+    subprocess.run(['pkill', 'sod2d'])
+
+
 
 class SodEnvBase(py_environment.PyEnvironment):
     """
@@ -258,15 +297,20 @@ class SodEnvBase(py_environment.PyEnvironment):
         # set SOD2D exe arguments
         sod_args = {"restart_step": restart_step, "f_action": self.f_action,
             "t_episode": self.t_episode, "t_begin_control": self.t_begin_control}
+        
         for i in range(self.cfd_n_envs):
-            exe_args = [self.sod_JSON] + [f"--{k}={v[i]}" for k,v in sod_args.items()]
-            run = MpirunSettings(exe=self.sod_exe, exe_args=exe_args)
+            compss_sod2d(self.db_address, self.sod_JSON, restart_step[i], self.f_action[i], self.t_episode[i], self.t_begin_control[i])
+            # exe_args = [self.sod_JSON] + [f"--{k}={v[i]}" for k,v in sod_args.items()]
+            # run = MpirunSettings(exe=self.sod_exe, exe_args=exe_args)
+            run = MpirunSettings(exe='hostname')
             run.set_tasks(self.n_tasks_per_env)
+
             if i == 0:
                 f_mpmd = run
             else:
                 f_mpmd.make_mpmd(run)
-        return f_mpmd
+        
+        return run
 
 
     def _create_mpmd_ensemble(self, restart_file):
@@ -287,8 +331,11 @@ class SodEnvBase(py_environment.PyEnvironment):
 
     def _get_n_state(self):
         try:
-            self.client.poll_tensor(self.state_size_key, 100, self.poll_time) # poll every 100ms for 1000 times (100s in total)
-            state_size = self.client.get_tensor(self.state_size_key)
+            # self.client.poll_tensor(self.state_size_key, 100, self.poll_time) # poll every 100ms for 1000 times (100s in total)
+            # state_size = self.client.get_tensor(self.state_size_key)
+            state_size_hecuba = mynumpyclass.get_by_alias(self.state_size_key.replace('.', '_'))
+            state_size_hecuba.poll()
+            state_size = state_size_hecuba.astype(np.int32)
         except Exception as exc:
             raise Warning(f"Could not read state size from key: {self.state_size_key}") from exc
         logger.debug(f"Read state_size: {state_size}")
@@ -297,8 +344,11 @@ class SodEnvBase(py_environment.PyEnvironment):
 
     def _get_n_action(self):
         try:
-            self.client.poll_tensor(self.action_size_key, 100, self.poll_time)
-            action_size = self.client.get_tensor(self.action_size_key)
+            # self.client.poll_tensor(self.action_size_key, 100, self.poll_time)
+            # action_size = self.client.get_tensor(self.action_size_key)
+            action_size_hecuba = mynumpyclass.get_by_alias(self.action_size_key.replace('.', '_'))
+            action_size_hecuba.poll()
+            action_size = action_size_hecuba.astype(np.int32)
             logger.debug(f"Read action_size: {action_size}")
         except Exception as exc:
             raise Warning(f"Could not read action size from key: {self.action_size_key}") from exc
@@ -311,11 +361,15 @@ class SodEnvBase(py_environment.PyEnvironment):
         """
         for i in range(self.cfd_n_envs):
             if self._step_type[i] > 0: # environment still running
-                self.client.poll_tensor(self.state_key[i], 100, self.poll_time)
+                # self.client.poll_tensor(self.state_key[i], 100, self.poll_time)
                 try:
-                    self._state[i, :] = self.client.get_tensor(self.state_key[i])
-                    self.client.delete_tensor(self.state_key[i])
-                    logger.debug(f"[Env {i}] Got state: {numpy_str(self._state[i, :5])}")
+                    logger.debug(f"[Env {i}] Trying to read state from key: {self.state_key[i].replace('.', '_')}")
+                    state_hecuba = mynumpyclass.get_by_alias(self.state_key[i].replace('.', '_'))
+                    state_hecuba.poll()
+                    self._state[i, :] = state_hecuba.astype(self._state.dtype)
+                    # self._state[i, :] = self.client.get_tensor(self.state_key[i])
+                    # self.client.delete_tensor(self.state_key[i])
+                    logger.debug(f"[Env {i}] Got state: {numpy_str(self._state[i, :5])} dtype: {self._state.dtype} shape {self._state.shape}")
                 except Exception as exc:
                     raise Warning(f"Could not read state from key: {self.state_key[i]}") from exc
 
@@ -337,15 +391,15 @@ class SodEnvBase(py_environment.PyEnvironment):
         raise NotImplementedError
 
 
-    def _get_time(self):
-        for i in range(self.cfd_n_envs):
-            self.client.poll_tensor(self.time_key[i], 100, self.poll_time)
-            try:
-                self._time[i] = self.client.get_tensor(self.time_key[i])[0]
-                self.client.delete_tensor(self.time_key[i])
-                logger.debug(f"[Env {i}] Got time: {numpy_str(self._time[i])}")
-            except Exception as exc:
-                raise Warning(f"Could not read time from key: {self.time_key[i]}") from exc
+    # def _get_time(self):
+    #     for i in range(self.cfd_n_envs):
+    #         self.client.poll_tensor(self.time_key[i], 100, self.poll_time)
+    #         try:
+    #             self._time[i] = self.client.get_tensor(self.time_key[i])[0]
+    #             self.client.delete_tensor(self.time_key[i])
+    #             logger.debug(f"[Env {i}] Got time: {numpy_str(self._time[i])}")
+    #         except Exception as exc:
+    #             raise Warning(f"Could not read time from key: {self.time_key[i]}") from exc
 
 
     def get_status(self):
@@ -358,24 +412,30 @@ class SodEnvBase(py_environment.PyEnvironment):
             2: Running
         Returns array with step_type from every environment.
         """
-        if not self.envs_initialised: # initialising environments - poll and wait for them to get started
-            for i in range(self.cfd_n_envs):
-                self.client.poll_tensor(self.step_type_key[i], 100, self.poll_time)
-                try:
-                    self._step_type[i] = self.client.get_tensor(self.step_type_key[i])[0]
-                except Exception as exc:
-                    raise Warning(f"Could not read step type from key: {self.step_type_key[i]}.") from exc
-            if np.any(self._step_type < 0):
-                raise ValueError(f"Environments could not be initialized, or initial step_type could not be read from database. \
-                    \n step_type = {self._step_type}")
-            self.envs_initialised = True
-        else:
-            for i in range(self.cfd_n_envs):
-                try:
-                    self._step_type[i] = self.client.get_tensor(self.step_type_key[i])[0]
-                except Exception as exc:
-                    raise Warning(f"Could not read step type from key: {self.step_type_key[i]}") from exc
+        for i in range(self.cfd_n_envs):
+            step_type_hecuba = mynumpyclass.get_by_alias(self.step_type_key[i].replace('.', '_'))
+            step_type_hecuba.poll()
+            self._step_type[i, :] = step_type_hecuba.astype(np.int32)
         return self._step_type
+
+        # if not self.envs_initialised: # initialising environments - poll and wait for them to get started
+        #     for i in range(self.cfd_n_envs):
+        #         self.client.poll_tensor(self.step_type_key[i], 100, self.poll_time)
+        #         try:
+        #             self._step_type[i] = self.client.get_tensor(self.step_type_key[i])[0]
+        #         except Exception as exc:
+        #             raise Warning(f"Could not read step type from key: {self.step_type_key[i]}.") from exc
+        #     if np.any(self._step_type < 0):
+        #         raise ValueError(f"Environments could not be initialized, or initial step_type could not be read from database. \
+        #             \n step_type = {self._step_type}")
+        #     self.envs_initialised = True
+        # else:
+        #     for i in range(self.cfd_n_envs):
+        #         try:
+        #             self._step_type[i] = self.client.get_tensor(self.step_type_key[i])[0]
+        #         except Exception as exc:
+        #             raise Warning(f"Could not read step type from key: {self.step_type_key[i]}") from exc
+        # return self._step_type
 
 
     def _set_action(self, action):
@@ -412,12 +472,13 @@ class SodEnvBase(py_environment.PyEnvironment):
         Stop SOD2D experiment (ensemble of models) with SmartSim
         """
         # delete data from database
-        self.client.delete_tensor(self.state_size_key)
-        self.client.delete_tensor(self.action_size_key)
-        for i in range(self.cfd_n_envs):
-            self.client.delete_tensor(self.step_type_key[i])
+        # self.client.delete_tensor(self.state_size_key)
+        # self.client.delete_tensor(self.action_size_key)
+        # for i in range(self.cfd_n_envs):
+        #     self.client.delete_tensor(self.step_type_key[i])
         # stop ensemble run
-        self.exp.stop(self.ensemble)
+        # self.exp.stop(self.ensemble)
+        compss_wait_on(cancel_sod2d())
         # move ensemble log files
         for f in glob.glob("ensemble-*"):
             shutil.move(f, "sod2d_exp/")
