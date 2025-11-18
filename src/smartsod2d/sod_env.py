@@ -415,7 +415,11 @@ class SodEnvBase(py_environment.PyEnvironment):
         for i in range(self.cfd_n_envs):
             step_type_hecuba = mynumpyclass.get_by_alias(self.step_type_key[i].replace('.', '_'))
             step_type_hecuba.poll()
-            self._step_type[i, :] = step_type_hecuba.astype(np.int32)
+            self._step_type[i] = step_type_hecuba.astype(np.int32)[0]
+        if np.any(self._step_type < 0):
+            raise ValueError(f"Environments could not be initialized, or initial step_type could not be read from database. \
+                \n step_type = {self._step_type}")
+        self.envs_initialised = True
         return self._step_type
 
         # if not self.envs_initialised: # initialising environments - poll and wait for them to get started
